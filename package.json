@@ -1,0 +1,14 @@
+{
+  "name": "netshelter",
+  "private": true,
+  "version": "1.0.0",
+  "description": "NetShelter: Capacity Load-Balancing Matrix for the NY-11 Congressional App Challenge.",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 3847 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 3847 --strictPort"
+  },
+  "devDependencies": {
+    "vite": "^6.4.1"
+  }
+}

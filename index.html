@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#070b12" />
+  <meta name="description" content="NetShelter is the NY-11 capacity load-balancing matrix. It places shelter intake across Staten Island and Bay Ridge using live occupancy, specialization, and distance from dispatch." />
+  <title>NetShelter: Capacity Load-Balancing Matrix</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 L28 9 V23 L16 30 L4 23 V9 Z' fill='none' stroke='%2306b6d4' stroke-width='1.8'/%3E%3Ccircle cx='16' cy='16' r='3.2' fill='%2306b6d4'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #070b12;
+      --card: rgba(15, 23, 42, 0.65);
+      --line: rgba(255, 255, 255, 0.08);
+      --text: #e7eef8;
+      --muted: #93a4bd;
+      --dim: #6f849f;
+      --cyan: #06b6d4;
+      --cyan-2: #67e8f9;
+      --emerald: #10b981;
+      --crimson: #ef4444;
+      --amber: #f59e0b;
+      --amber-2: #fbbf24;
+      --violet: #c4b5fd;
+      --shadow: 0 18px 40px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html { color-scheme: dark; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      color: var(--text);
+      font-family: Outfit, "Segoe UI", sans-serif;
+      font-size: 14px;
+      background:
+        radial-gradient(980px 520px at 8% -10%, rgba(6, 182, 212, 0.16), transparent 55%),
+        radial-gradient(820px 460px at 100% 0%, rgba(239, 68, 68, 0.09), transparent 48%),
+        radial-gradient(720px 480px at 78% 110%, rgba(16, 185, 129, 0.07), transparent 46%),
+        var(--bg);
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+      background-size: 52px 52px;
+      mask-image: radial-gradient(circle at 50% 35%, #000 0%, transparent 78%);
+    }
+    button, input, select { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    h1, h2, h3 { font-family: Syne, Outfit, sans-serif; }
+    p { margin: 0; }
+
+    .skip {
+      position: absolute;
+      left: 12px;
+      top: -40px;
+      z-index: 6000;
+      background: var(--cyan);
+      color: #04131a;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: 650;
+    }
+    .skip:focus { top: 12px; }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      grid-template-rows: auto minmax(340px, 1fr) 340px;
+      height: 100dvh;
+      gap: 12px;
+      padding: 12px;
+    }
+
+    .glass {
+      background: var(--card);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .topbar {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 68px;
+      padding: 10px 14px 10px 12px;
+      animation: rise 0.55s ease both;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .mark {
+      width: 40px;
+      height: 40px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: rgba(6, 182, 212, 0.1);
+      border: 1px solid rgba(6, 182, 212, 0.28);
+      box-shadow: inset 0 0 16px rgba(6, 182, 212, 0.12);
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      font-weight: 750;
+    }
+    .brand h1 span {
+      display: block;
+      margin-top: 4px;
+      font-family: Outfit, sans-serif;
+      font-size: 12.5px;
+      font-weight: 500;
+      letter-spacing: 0;
+      color: var(--muted);
+    }
+    .top-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .chip, .pill, .clock {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(2, 6, 14, 0.35);
+      padding: 6px 10px;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .pill { letter-spacing: 0.12em; font-weight: 500; }
+    .pill i {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 8px currentColor;
+    }
+    .pill.ok { color: var(--emerald); background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.28); }
+    .pill.warn { color: var(--amber-2); background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3); }
+    .pill.crit { color: #fecaca; background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.4); }
+    .pill.crit i { animation: blink 1.15s ease-in-out infinite; }
+    .clock { color: var(--cyan-2); }
+
+    .sidebar {
+      grid-column: 1;
+      grid-row: 2 / 4;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: hidden;
+      animation: rise 0.6s ease 0.05s both;
+    }
+    .panel { padding: 10px 12px; }
+    .controls-panel { flex: 0 0 auto; }
+    .metrics .node-block { margin-top: 0; }
+    .kicker {
+      margin: 0 0 3px;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--cyan);
+    }
+    .panel h2 { margin: 0; font-size: 16px; letter-spacing: -0.03em; font-weight: 700; }
+    .lede { margin-top: 4px; color: var(--muted); font-size: 12.5px; line-height: 1.35; }
+    .formula {
+      margin: 8px 0 0;
+      padding: 6px 8px;
+      border-radius: 10px;
+      background: rgba(2, 6, 14, 0.5);
+      border: 1px solid rgba(6, 182, 212, 0.18);
+      color: var(--cyan-2);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 10.5px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+    .fine { margin-top: 4px; color: var(--dim); font-size: 11px; line-height: 1.35; }
+    .fields { display: grid; gap: 8px; margin-top: 8px; }
+    .field label { display: block; margin-bottom: 4px; color: #c5d3e4; font-size: 12px; }
+    .field input, .field select {
+      width: 100%;
+      height: 36px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(2, 6, 14, 0.55);
+      padding: 0 12px;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .field select {
+      appearance: none;
+      background-image:
+        linear-gradient(45deg, transparent 50%, var(--cyan) 50%),
+        linear-gradient(135deg, var(--cyan) 50%, transparent 50%);
+      background-position: calc(100% - 18px) 18px, calc(100% - 12px) 18px;
+      background-size: 6px 6px, 6px 6px;
+      background-repeat: no-repeat;
+      padding-right: 32px;
+    }
+    .field input:hover, .field select:hover { border-color: rgba(255, 255, 255, 0.2); }
+    .field input:focus, .field select:focus {
+      border-color: rgba(6, 182, 212, 0.75);
+      box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.16);
+    }
+    .form-error { min-height: 1.1em; margin: 8px 0 0; color: #fecaca; font-size: 12px; }
+    .execute {
+      width: 100%;
+      height: 42px;
+      margin-top: 2px;
+      border: 0;
+      border-radius: 12px;
+      font-family: Syne, Outfit, sans-serif;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #04131a;
+      background: linear-gradient(180deg, #67e8f9 0%, #06b6d4 52%, #0891b2 100%);
+      box-shadow: 0 10px 26px rgba(6, 182, 212, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+    }
+    .execute:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 0 0 1px rgba(103, 232, 249, 0.45), 0 14px 32px rgba(6, 182, 212, 0.34);
+    }
+    .execute:active:not(:disabled) { transform: translateY(0); }
+    .execute:disabled { cursor: progress; filter: saturate(0.7); }
+    .preset-label { margin: 8px 0 4px; color: var(--dim); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+    .presets button, .text-btn, .ghost {
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+      color: #d7e3f2;
+      transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, color 0.18s ease;
+    }
+    .presets button { padding: 7px 10px; font-size: 12px; }
+    .presets button:hover, .text-btn:hover, .ghost:hover {
+      border-color: rgba(6, 182, 212, 0.55);
+      background: rgba(6, 182, 212, 0.08);
+      color: white;
+    }
+    .row-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+    .ghost, .text-btn { padding: 6px 10px; font-size: 12px; background: transparent; }
+    .node-block { margin-top: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .node {
+      width: 100%;
+      text-align: left;
+      display: grid;
+      grid-template-columns: 8px minmax(0, 1fr) auto;
+      grid-template-rows: auto 3px;
+      column-gap: 6px;
+      row-gap: 3px;
+      align-items: center;
+      padding: 5px 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.025);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+    .node:hover { border-color: rgba(6, 182, 212, 0.45); transform: translateY(-1px); }
+    .node.flash { box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.55), 0 0 22px rgba(6, 182, 212, 0.18); }
+    .node-top { display: contents; }
+    .node-sub { display: none; }
+    .node-name {
+      font-weight: 600;
+      font-size: 12px;
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .node-open { display: none; }
+    .node-count, .node-open { margin-left: auto; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; color: var(--muted); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; flex: 0 0 auto; }
+    .tag {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 6px;
+      border-radius: 999px;
+    }
+    .tag[data-tag="General"] { color: var(--cyan-2); background: rgba(6, 182, 212, 0.12); }
+    .tag[data-tag="Juvenile"] { color: var(--violet); background: rgba(167, 139, 250, 0.14); }
+    .tag[data-tag="Medical Rehab"] { color: #6ee7b7; background: rgba(16, 185, 129, 0.12); }
+    .meter { grid-column: 1 / -1; display: block; height: 3px; border-radius: 99px; background: rgba(255, 255, 255, 0.07); overflow: hidden; }
+    .meter-fill { display: block; height: 100%; width: 0; border-radius: inherit; transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1), background 0.4s ease; }
+
+    .valve { transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease; }
+    .valve-copy { margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .valve-stat { margin-top: 4px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; color: var(--cyan-2); }
+    .valve.hot {
+      background: rgba(245, 158, 11, 0.12);
+      border-color: rgba(245, 158, 11, 0.62);
+      box-shadow: 0 0 28px rgba(245, 158, 11, 0.16), inset 0 1px 0 rgba(255, 214, 140, 0.25);
+    }
+    .valve.hot .kicker, .valve.hot h2, .valve.hot .valve-stat { color: var(--amber-2); }
+    .valve.hot .valve-copy { color: #fde7c2; }
+
+    .log-panel {
+      flex: 1 1 auto;
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+      padding-top: 8px;
+      padding-bottom: 10px;
+    }
+    .log-panel h2 { font-size: 14px; white-space: nowrap; }
+    .panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+    #log {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 8px;
+      border-radius: 12px;
+      background: rgba(2, 6, 14, 0.62);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 11.5px;
+      line-height: 1.45;
+    }
+    #log-empty { margin: 6px; color: var(--dim); }
+    .log-line {
+      display: grid;
+      grid-template-columns: auto auto minmax(0, 1fr);
+      gap: 8px;
+      padding: 3px 4px;
+      animation: rise 0.35s ease both;
+    }
+    .log-line time, .log-line b { white-space: nowrap; }
+    .log-line time { color: var(--dim); }
+    .log-line b { font-weight: 500; }
+    .log-line span { color: #d5e2f0; }
+    .lv-sys b, .lv-run b { color: var(--cyan-2); }
+    .lv-score b { color: #a5b4c8; }
+    .lv-alloc b, .lv-ok b { color: var(--emerald); }
+    .lv-warning b { color: var(--amber-2); }
+    .lv-critical b { color: #fca5a5; }
+
+    .stage {
+      grid-column: 2;
+      grid-row: 2;
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      animation: rise 0.65s ease 0.08s both;
+    }
+    #map { position: absolute; inset: 0; background: #070b12; }
+    .leaflet-container { font-family: Outfit, sans-serif; background: #070b12; }
+    .leaflet-tile-pane { filter: brightness(0.82) contrast(1.18); }
+    .leaflet-bar { border: 0 !important; box-shadow: none !important; }
+    .leaflet-bar a {
+      background: rgba(15, 23, 42, 0.88);
+      color: var(--text);
+      border: 1px solid var(--line) !important;
+      width: 32px;
+      height: 32px;
+      line-height: 32px;
+    }
+    .leaflet-bar a:hover { background: rgba(6, 182, 212, 0.22); color: white; }
+    .leaflet-control-attribution {
+      background: rgba(7, 11, 18, 0.78) !important;
+      color: #8ea0b8 !important;
+      font-size: 10px !important;
+      border-radius: 8px 0 0 0;
+    }
+    .leaflet-control-attribution a { color: var(--cyan-2) !important; }
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+      background: rgba(15, 23, 42, 0.94);
+      color: var(--text);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+    }
+    .leaflet-popup-content-wrapper {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+    }
+    .leaflet-popup-content { margin: 12px 14px; }
+    .leaflet-container a.leaflet-popup-close-button { color: #cbd5e1; }
+    .leaflet-tooltip.node-tip {
+      background: rgba(7, 11, 18, 0.9);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 11px;
+      padding: 4px 8px;
+    }
+    .leaflet-tooltip.node-tip::before { display: none; }
+    .pop strong {
+      display: block;
+      margin: 2px 0 8px;
+      font-family: Syne, Outfit, sans-serif;
+      font-size: 15px;
+    }
+    .pop p { margin-top: 4px; font-size: 12px; color: #b7c5d8; }
+    .pop-tag {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--cyan);
+    }
+    .pop-meter { height: 6px; border-radius: 99px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+    .pop-meter span { display: block; height: 100%; }
+
+    .node-circle.is-crit { animation: blipPulse 1.15s ease-in-out infinite; }
+    .halo-wrap, .dispatch-wrap { background: transparent !important; border: none !important; }
+    .halo {
+      width: 86px;
+      height: 86px;
+      border-radius: 50%;
+      border: 2px solid rgba(239, 68, 68, 0.9);
+      box-shadow: 0 0 18px rgba(239, 68, 68, 0.65);
+      animation: halo 1.6s ease-out infinite;
+    }
+    .dispatch-pin { position: relative; width: 150px; height: 28px; }
+    .dispatch-pin i {
+      position: absolute;
+      left: 6px;
+      top: 6px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 0 5px rgba(6, 182, 212, 0.18), 0 0 16px var(--cyan);
+    }
+    .dispatch-pin em {
+      position: absolute;
+      left: 30px;
+      top: 5px;
+      font-style: normal;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--cyan-2);
+      white-space: nowrap;
+      text-shadow: 0 1px 2px #000;
+    }
+    .route-line { animation: routeFlow 1.05s linear infinite; }
+
+    .assign-card, .legend, .map-alert {
+      position: absolute;
+      z-index: 500;
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+    }
+    .assign-card {
+      top: 14px;
+      left: 14px;
+      width: min(280px, calc(100% - 88px));
+      padding: 12px 14px;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }
+    .assign-card h3 { margin: 2px 0 0; font-size: 16px; letter-spacing: -0.03em; }
+    .assign-card p:last-child { margin-top: 6px; color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+    .assign-card.hot { border-color: rgba(245, 158, 11, 0.55); }
+    .assign-card.hot .kicker { color: var(--amber-2); }
+    .legend {
+      right: 14px;
+      bottom: 22px;
+      margin: 0;
+      padding: 10px 12px;
+      list-style: none;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      display: grid;
+      gap: 5px;
+    }
+    .legend li { display: flex; align-items: center; gap: 8px; color: #d5e2f0; font-size: 11.5px; }
+    .swatch { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
+    .swatch.ok { background: var(--emerald); box-shadow: 0 0 8px rgba(16, 185, 129, 0.7); }
+    .swatch.warn { background: var(--amber); box-shadow: 0 0 8px rgba(245, 158, 11, 0.6); }
+    .swatch.crit { background: var(--crimson); box-shadow: 0 0 8px rgba(239, 68, 68, 0.8); }
+    .swatch.vector { width: 16px; height: 0; border-radius: 0; background: none; border-top: 2px dashed var(--cyan-2); }
+    .map-alert {
+      top: 14px;
+      right: 58px;
+      max-width: min(340px, calc(100% - 380px));
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(120, 53, 15, 0.78);
+      border: 1px solid rgba(245, 158, 11, 0.7);
+      color: #fff7e6;
+      box-shadow: 0 0 24px rgba(245, 158, 11, 0.2);
+    }
+    .map-alert[hidden] { display: none !important; }
+    .map-alert strong { display: block; font-family: Syne, Outfit, sans-serif; letter-spacing: 0.04em; font-size: 12px; color: var(--amber-2); }
+    .map-alert span { display: block; margin-top: 3px; font-size: 12px; line-height: 1.35; }
+
+    .metrics {
+      grid-column: 2;
+      grid-row: 3;
+      min-width: 0;
+      min-height: 0;
+      padding: 12px 14px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      animation: rise 0.7s ease 0.12s both;
+    }
+    .metrics-head { display: grid; grid-template-columns: minmax(160px, 220px) minmax(0, 1fr); gap: 12px; align-items: center; }
+    .kpi-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .kpi {
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(2, 6, 14, 0.38);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .kpi em { display: block; font-style: normal; color: var(--dim); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; }
+    .kpi b { display: block; margin-top: 2px; font-family: Syne, Outfit, sans-serif; font-size: 22px; letter-spacing: -0.04em; font-weight: 750; }
+    .kpi b.ok { color: var(--emerald); }
+    .kpi b.warn { color: var(--amber-2); }
+    .kpi b.crit { color: #fca5a5; }
+    .kpi b.cyan { color: var(--cyan-2); }
+    .kpi b.amber { color: var(--amber-2); }
+    .metrics-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.15fr 0.95fr; gap: 12px; }
+    .chart-wrap, .trace { min-width: 0; min-height: 0; position: relative; }
+    .chart-wrap { height: 100%; }
+    .trace { display: flex; flex-direction: column; }
+    .trace-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; margin-bottom: 6px; }
+    .trace-head h3 { margin: 0; font-size: 13px; letter-spacing: -0.02em; }
+    .trace-head span, .empty-trace { color: var(--dim); font-size: 11px; }
+    .trace-scroll { overflow: auto; min-height: 0; flex: 1; }
+    table { width: 100%; border-collapse: collapse; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+    th, td { padding: 5px 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); white-space: nowrap; }
+    th {
+      position: sticky;
+      top: 0;
+      text-align: left;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--dim);
+      font-weight: 500;
+      background: rgba(15, 23, 42, 0.94);
+    }
+    td.num, th.num { text-align: right; font-family: "IBM Plex Mono", ui-monospace, monospace; }
+    tr.dq td { color: #7f8ea3; }
+    tr.got td.name { color: white; }
+    td.placed { color: var(--emerald); font-family: "IBM Plex Mono", ui-monospace, monospace; }
+    tr.overflow td { color: var(--amber-2); }
+    .empty-trace { padding: 8px 2px; line-height: 1.45; }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+
+    .boot-error {
+      position: relative;
+      z-index: 2;
+      max-width: 640px;
+      margin: 12vh auto;
+      padding: 28px;
+    }
+    .boot-error h1 { margin: 0 0 8px; font-size: 28px; }
+    .boot-error p { color: var(--muted); line-height: 1.5; }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 4000;
+      display: grid;
+      place-items: center;
+      background: rgba(7, 11, 18, 0.72);
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .overlay.on { opacity: 1; pointer-events: auto; }
+    .overlay-card { position: relative; width: min(580px, calc(100% - 32px)); padding: 28px 28px 22px; overflow: hidden; }
+    .overlay-card h2 {
+      margin: 4px 0 0;
+      font-size: clamp(20px, 3vw, 28px);
+      letter-spacing: 0.04em;
+      line-height: 1.15;
+      color: white;
+      text-shadow: 0 0 18px rgba(6, 182, 212, 0.45);
+    }
+    .overlay-sub { margin-top: 8px; color: var(--muted); }
+    .scanner {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      box-shadow: 0 0 16px var(--cyan);
+      animation: scan 1s linear infinite;
+    }
+    .loadbar { height: 3px; margin-top: 18px; border-radius: 99px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+    .loadbar span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #06b6d4, #a5f3fc); }
+    .overlay.on .loadbar span { animation: fillbar 1s linear forwards; }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+    @keyframes blipPulse {
+      0%, 100% { stroke-opacity: 1; fill-opacity: 0.45; }
+      50% { stroke-opacity: 0.35; fill-opacity: 0.1; }
+    }
+    @keyframes halo {
+      0% { transform: scale(0.45); opacity: 0.9; }
+      100% { transform: scale(1.25); opacity: 0; }
+    }
+    @keyframes routeFlow { to { stroke-dashoffset: -36; } }
+    @keyframes scan { from { top: 0; } to { top: 100%; } }
+    @keyframes fillbar { from { width: 0; } to { width: 100%; } }
+
+    @media (max-height: 840px) {
+      .formula { display: none; }
+      .field input, .field select, .execute { height: 34px; }
+      .preset-label { margin-top: 6px; }
+      .sidebar { overflow: auto; }
+    }
+    @media (max-width: 1180px) {
+      .metrics-head, .metrics-body { grid-template-columns: 1fr; }
+      .map-alert { max-width: min(280px, 46vw); }
+    }
+    @media (max-width: 980px) {
+      body { overflow: auto; }
+      .app {
+        height: auto;
+        min-height: 100dvh;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+      }
+      .topbar, .sidebar, .stage, .metrics { grid-column: 1; grid-row: auto; }
+      .stage { order: 2; height: 72vh; min-height: 520px; }
+      .metrics { order: 3; height: auto; }
+      .sidebar { order: 4; overflow: visible; }
+      .controls-panel, .nodes-panel { overflow: visible; }
+      .log-panel { flex: none; min-height: 280px; height: 320px; }
+      .chart-wrap { height: 230px; }
+      .trace-scroll { max-height: 240px; }
+      .brand h1 span { display: none; }
+    }
+    @media (max-width: 720px) {
+      .kpi-row, .node-block { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .chip { display: none; }
+      .assign-card { width: calc(100% - 28px); }
+      .map-alert { left: 14px; right: 14px; top: auto; bottom: 148px; max-width: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#intake-form">Skip to intake controls</a>
+  <div class="app" id="app">
+    <header class="topbar glass">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <path d="M16 2.5L27.5 9.2V22.8L16 29.5L4.5 22.8V9.2L16 2.5Z" stroke="#06b6d4" stroke-width="1.6"/>
+            <circle cx="16" cy="16" r="6.5" stroke="#06b6d4" stroke-opacity="0.55"/>
+            <circle cx="16" cy="16" r="3" fill="#06b6d4"/>
+          </svg>
+        </div>
+        <h1>NetShelter<span>Capacity Load-Balancing Matrix</span></h1>
+      </div>
+      <div class="top-meta">
+        <div class="chip">Congressional App Challenge · NY-11</div>
+        <div id="status-pill" class="pill crit" role="status"><i></i><span id="status-text">CRITICAL</span></div>
+        <time id="clock" class="clock">--:--:-- ET</time>
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <section class="panel glass controls-panel">
+        <p class="kicker">Control parameters</p>
+        <h2>Intake simulation</h2>
+        <pre class="formula" title="Distance is haversine kilometers from entry dispatch at 40.5895, −74.1154. A node at maximum capacity is disqualified.">score = (vacancies × 0.5) + (match ? 30 : 0) − (km × 0.2)</pre>
+        <form id="intake-form" novalidate>
+          <div class="fields">
+            <div class="field">
+              <label for="intake-size">Intake size</label>
+              <input id="intake-size" name="intake" type="number" inputmode="numeric" min="1" max="500" step="1" value="25" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="spec">Specialization constraint</label>
+              <select id="spec" name="spec">
+                <option value="General">General</option>
+                <option value="Medical Rehab">Medical Rehab</option>
+                <option value="Juvenile">Juvenile</option>
+              </select>
+            </div>
+          </div>
+          <p id="form-error" class="form-error" role="alert"></p>
+          <button class="execute" id="execute" type="submit">Execute balance matrix</button>
+        </form>
+        <p class="preset-label">One-click waves</p>
+        <div class="presets" id="presets">
+          <button type="button" data-intake="8" data-spec="Medical Rehab">Medical spike · 8</button>
+          <button type="button" data-intake="12" data-spec="Juvenile">Youth wave · 12</button>
+          <button type="button" data-intake="25" data-spec="General">General surge · 25</button>
+          <button type="button" data-intake="80" data-spec="General">Crisis overflow · 80</button>
+        </div>
+        <div class="row-actions">
+          <button type="button" class="ghost" id="reset">Restore baseline</button>
+          <span class="fine" id="memory-note">Stored in this browser</span>
+        </div>
+      </section>
+
+      <section class="panel glass valve" id="valve">
+        <p class="kicker" id="valve-kicker">Overflow path</p>
+        <h2 id="valve-title">Release valve</h2>
+        <p class="valve-copy" id="valve-copy"></p>
+        <p class="valve-stat" id="valve-stat"></p>
+      </section>
+
+      <section class="panel glass log-panel" id="log-panel">
+        <div class="panel-head">
+          <h2>Live telemetry console logger</h2>
+          <button type="button" class="text-btn" id="clear-log">Clear</button>
+        </div>
+        <div id="log" role="log" aria-live="polite" aria-relevant="additions">
+          <p id="log-empty">Telemetry channel idle. Execute a run to record the matrix.</p>
+        </div>
+      </section>
+    </aside>
+
+    <section class="stage" aria-label="Facility map">
+      <h2 class="sr-only">Staten Island and NY-11 facility map</h2>
+      <div id="map" role="application" aria-label="Interactive map of NY-11 shelter nodes"></div>
+      <aside class="assign-card" id="assign-card">
+        <p class="kicker" id="assign-kicker">Primary vector</p>
+        <h3 id="assign-name">Awaiting intake</h3>
+        <p id="assign-meta">Vectors draw from entry dispatch to each node that receives people.</p>
+      </aside>
+      <div class="map-alert" id="map-alert" hidden>
+        <strong>CRITICAL OVERRIDE</strong>
+        <span id="map-alert-copy"></span>
+      </div>
+      <ul class="legend">
+        <li><i class="swatch ok"></i> Balanced · under 70%</li>
+        <li><i class="swatch warn"></i> Strained · 70–95%</li>
+        <li><i class="swatch crit"></i> Urgent · above 95%</li>
+        <li><i class="swatch vector"></i> Dispatch vector</li>
+      </ul>
+    </section>
+
+    <section class="metrics glass">
+      <div class="metrics-head">
+        <div>
+          <p class="kicker">Analytics</p>
+          <h2>Live capacity status</h2>
+        </div>
+        <div class="kpi-row">
+          <div class="kpi"><em>Network load</em><b id="kpi-load" class="warn">—</b></div>
+          <div class="kpi"><em>Open beds</em><b id="kpi-beds" class="cyan">—</b></div>
+          <div class="kpi"><em>Critical nodes</em><b id="kpi-critical" class="crit">—</b></div>
+          <div class="kpi"><em>Valve routed</em><b id="kpi-valve">—</b></div>
+        </div>
+      </div>
+      <div class="node-block" id="node-list" aria-label="Facility nodes"></div>
+      <div class="metrics-body">
+        <div class="chart-wrap">
+          <canvas id="capacity-chart" aria-label="Horizontal bar chart of shelter occupancy percent"></canvas>
+        </div>
+        <div class="trace">
+          <div class="trace-head">
+            <h3>Score matrix</h3>
+            <span id="trace-when">No run yet</span>
+          </div>
+          <div class="trace-scroll" id="trace-body">
+            <p class="empty-trace">Run an intake to see vacancies, match, distance, score, and where each person was placed.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="overlay" class="overlay" aria-hidden="true">
+    <div class="overlay-card glass" role="status" aria-live="polite">
+      <div class="scanner" aria-hidden="true"></div>
+      <p class="kicker">NY-11 system balance</p>
+      <h2>COMPUTING SYSTEM BALANCE MATRIX...</h2>
+      <p class="overlay-sub">Vacancies, specialization match, and dispatch distance</p>
+      <div class="loadbar" aria-hidden="true"><span></span></div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const STORAGE_KEY = 'netshelter.ny11.v1';
+      const SPECS = ['General', 'Medical Rehab', 'Juvenile'];
+      const STATUS_COLOR = { ok: '#10b981', warn: '#f59e0b', crit: '#ef4444' };
+      const DISPATCH = { lat: 40.5895, lng: -74.1154, name: 'NY-11 Entry Dispatch' };
+      const MAP_CENTER = [40.5795, -74.1154];
+      const BASELINE = [
+        { id: 'st-george', name: 'St. George Intake Hub', short: 'St. George', lat: 40.6445, lng: -74.0805, max: 100, current: 96, tag: 'General' },
+        { id: 'south-shore', name: 'South Shore Safe-Haven', short: 'South Shore', lat: 40.5242, lng: -74.2045, max: 50, current: 44, tag: 'Juvenile' },
+        { id: 'new-dorp', name: 'New Dorp Rehab Point', short: 'New Dorp', lat: 40.5735, lng: -74.1112, max: 30, current: 28, tag: 'Medical Rehab' },
+        { id: 'bay-ridge', name: 'Bay Ridge Transit Point', short: 'Bay Ridge', lat: 40.6254, lng: -74.0298, max: 120, current: 102, tag: 'General' }
+      ];
+
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const state = {
+        nodes: BASELINE.map((node) => ({ ...node, baseline: node.current })),
+        logs: [],
+        valve: { active: false, lastOverflow: 0, totalRouted: 0, lastIntake: 0, lastSpec: 'General' },
+        trace: null,
+        running: false
+      };
+
+      const $ = (id) => document.getElementById(id);
+      const intakeInput = $('intake-size');
+      const specSelect = $('spec');
+      const formError = $('form-error');
+      const executeBtn = $('execute');
+      const overlay = $('overlay');
+      const logEl = $('log');
+      const nodeList = $('node-list');
+      const valveEl = $('valve');
+      const valveKicker = $('valve-kicker');
+      const valveTitle = $('valve-title');
+      const valveCopy = $('valve-copy');
+      const valveStat = $('valve-stat');
+      const assignCard = $('assign-card');
+      const assignKicker = $('assign-kicker');
+      const assignName = $('assign-name');
+      const assignMeta = $('assign-meta');
+      const mapAlert = $('map-alert');
+      const mapAlertCopy = $('map-alert-copy');
+      const traceBody = $('trace-body');
+      const traceWhen = $('trace-when');
+      const statusPill = $('status-pill');
+      const statusText = $('status-text');
+      const clockEl = $('clock');
+
+      let map;
+      let chart;
+      let routeLayer;
+
+      function haversineKm(a, b) {
+        const R = 6371;
+        const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+        const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+        const lat1 = (a.lat * Math.PI) / 180;
+        const lat2 = (b.lat * Math.PI) / 180;
+        const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+        return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+      }
+
+      function statusOf(node) {
+        const ratio = node.current / node.max;
+        if (ratio > 0.95) return 'crit';
+        if (ratio >= 0.7) return 'warn';
+        return 'ok';
+      }
+
+      function networkSnapshot() {
+        const max = state.nodes.reduce((sum, node) => sum + node.max, 0);
+        const current = state.nodes.reduce((sum, node) => sum + node.current, 0);
+        const open = state.nodes.reduce((sum, node) => sum + Math.max(0, node.max - node.current), 0);
+        const critical = state.nodes.filter((node) => statusOf(node) === 'crit').length;
+        const worst = critical ? 'crit' : state.nodes.some((node) => statusOf(node) === 'warn') ? 'warn' : 'ok';
+        return { max, current, open, critical, worst, load: max ? (current / max) * 100 : 0 };
+      }
+
+      function planAllocation(nodes, intake, spec) {
+        const rows = nodes.map((node) => {
+          const vacancies = Math.max(0, node.max - node.current);
+          const distanceKm = haversineKm(DISPATCH, node);
+          const match = node.tag === spec;
+          const disqualified = vacancies <= 0 || node.current >= node.max;
+          const score = disqualified
+            ? Number.NEGATIVE_INFINITY
+            : vacancies * 0.5 + (match ? 30 : 0) - distanceKm * 0.2;
+          return {
+            id: node.id,
+            name: node.name,
+            short: node.short,
+            tag: node.tag,
+            vacancies,
+            distanceKm,
+            match,
+            disqualified,
+            score,
+            allocated: 0,
+            before: node.current,
+            max: node.max
+          };
+        });
+
+        rows.sort((a, b) => {
+          if (a.disqualified !== b.disqualified) return a.disqualified ? 1 : -1;
+          if (b.score !== a.score) return b.score - a.score;
+          if (a.distanceKm !== b.distanceKm) return a.distanceKm - b.distanceKm;
+          return a.name.localeCompare(b.name);
+        });
+
+        let remaining = intake;
+        rows.forEach((row) => {
+          if (remaining <= 0 || row.disqualified) return;
+          const take = Math.min(remaining, row.vacancies);
+          row.allocated = take;
+          remaining -= take;
+        });
+
+        return { rows, overflow: remaining };
+      }
+
+      function stamp(date = new Date()) {
+        return new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hourCycle: 'h23'
+        }).format(date);
+      }
+
+      function loadMemory() {
+        try {
+          const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+          if (!raw || raw.v !== 1) return;
+          state.nodes.forEach((node) => {
+            const saved = raw.currents && raw.currents[node.id];
+            if (typeof saved === 'number' && Number.isFinite(saved)) {
+              node.current = Math.max(0, Math.min(node.max, Math.round(saved)));
+            }
+          });
+          if (Array.isArray(raw.logs)) state.logs = raw.logs.slice(-100);
+          if (raw.valve && typeof raw.valve === 'object') {
+            state.valve = {
+              active: Boolean(raw.valve.active),
+              lastOverflow: Number(raw.valve.lastOverflow) || 0,
+              totalRouted: Number(raw.valve.totalRouted) || 0,
+              lastIntake: Number(raw.valve.lastIntake) || 0,
+              lastSpec: SPECS.includes(raw.valve.lastSpec) ? raw.valve.lastSpec : 'General'
+            };
+          }
+          if (raw.trace && Array.isArray(raw.trace.rows)) state.trace = raw.trace;
+        } catch (err) {
+          /* Memory is optional. A corrupt frame falls back to baseline. */
+        }
+      }
+
+      function saveMemory() {
+        const payload = {
+          v: 1,
+          currents: Object.fromEntries(state.nodes.map((node) => [node.id, node.current])),
+          logs: state.logs.slice(-100),
+          valve: state.valve,
+          trace: state.trace
+        };
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        } catch (err) {
+          /* Private mode can reject storage. The live session still runs. */
+        }
+      }
+
+      function showError(message) {
+        formError.textContent = message || '';
+      }
+
+      function readIntake() {
+        const raw = intakeInput.value.trim();
+        if (!/^\d+$/.test(raw)) return { error: 'Enter a whole number of people.' };
+        const intake = Number(raw);
+        if (intake < 1) return { error: 'Intake has to be at least 1 person.' };
+        if (intake > 500) return { error: 'This desk simulates waves up to 500 people.' };
+        const spec = specSelect.value;
+        if (!SPECS.includes(spec)) return { error: 'Choose a specialization constraint.' };
+        return { intake, spec };
+      }
+
+      function paintLog(entry) {
+        const empty = $('log-empty');
+        if (empty) empty.remove();
+        const row = document.createElement('div');
+        row.className = 'log-line lv-' + entry.level;
+        const time = document.createElement('time');
+        time.dateTime = entry.iso || '';
+        time.textContent = '[' + entry.stamp + ']';
+        const level = document.createElement('b');
+        level.textContent = entry.label;
+        const message = document.createElement('span');
+        message.textContent = entry.message;
+        row.append(time, level, message);
+        logEl.appendChild(row);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function pushLogs(entries, persist) {
+        entries.forEach((entry) => {
+          if (persist) state.logs.push(entry);
+          paintLog(entry);
+        });
+        if (persist && state.logs.length > 100) state.logs.splice(0, state.logs.length - 100);
+      }
+
+      function makeEntry(level, label, message) {
+        const now = new Date();
+        return { level, label, message, stamp: stamp(now), iso: now.toISOString() };
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (ch) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[ch]));
+      }
+
+      function popupHtml(node) {
+        const status = statusOf(node);
+        const label = status === 'crit' ? 'Above 95% · urgent' : status === 'warn' ? '70–95% · strained' : 'Under 70% · balanced';
+        const open = Math.max(0, node.max - node.current);
+        const km = haversineKm(DISPATCH, node);
+        const placed = state.trace && state.trace.rows.find((row) => row.id === node.id);
+        const placedLine = placed && placed.allocated > 0
+          ? '<p>Last wave placed ' + placed.allocated + ' here.</p>'
+          : '';
+        return (
+          '<div class="pop">' +
+            '<div class="pop-tag">' + escapeHtml(node.tag) + '</div>' +
+            '<strong>' + escapeHtml(node.name) + '</strong>' +
+            '<div class="pop-meter"><span style="width:' + Math.round((node.current / node.max) * 100) + '%;background:' + STATUS_COLOR[status] + '"></span></div>' +
+            '<p>' + node.current + ' / ' + node.max + ' beds · ' + open + ' open</p>' +
+            '<p>' + km.toFixed(2) + ' km from entry dispatch</p>' +
+            '<p>' + label + '</p>' +
+            placedLine +
+          '</div>'
+        );
+      }
+
+      function ensureLayers(node) {
+        if (node.circle) return;
+        node.circle = L.circle([node.lat, node.lng], {
+          radius: 850,
+          weight: 2,
+          color: STATUS_COLOR.ok,
+          fillColor: STATUS_COLOR.ok,
+          fillOpacity: 0.16,
+          className: 'node-circle'
+        }).addTo(map);
+        node.circle.bindPopup('', { maxWidth: 260, className: 'node-pop' });
+        node.circle.bindTooltip('', { direction: 'top', offset: [0, -6], className: 'node-tip', opacity: 1 });
+        node.core = L.circleMarker([node.lat, node.lng], {
+          radius: 8,
+          weight: 2,
+          color: '#e7eef8',
+          fillColor: STATUS_COLOR.ok,
+          fillOpacity: 1
+        }).addTo(map);
+        node.core.on('click', () => {
+          node.circle.openPopup();
+        });
+      }
+
+      function syncHalo(node, status) {
+        if (status !== 'crit') {
+          if (node.halo) {
+            map.removeLayer(node.halo);
+            node.halo = null;
+          }
+          return;
+        }
+        if (node.halo) return;
+        node.halo = L.marker([node.lat, node.lng], {
+          pane: 'halos',
+          interactive: false,
+          keyboard: false,
+          icon: L.divIcon({
+            className: 'halo-wrap',
+            html: '<div class="halo"></div>',
+            iconSize: [86, 86],
+            iconAnchor: [43, 43]
+          })
+        }).addTo(map);
+      }
+
+      function syncNodeLayer(node) {
+        ensureLayers(node);
+        const status = statusOf(node);
+        const color = STATUS_COLOR[status];
+        node.circle.setStyle({
+          color,
+          fillColor: color,
+          fillOpacity: status === 'crit' ? 0.4 : status === 'warn' ? 0.22 : 0.16,
+          weight: status === 'crit' ? 3 : 2
+        });
+        const path = node.circle.getElement && node.circle.getElement();
+        if (path) path.classList.toggle('is-crit', status === 'crit');
+        node.core.setStyle({ fillColor: color, color: status === 'crit' ? '#fff' : '#e7eef8' });
+        const open = Math.max(0, node.max - node.current);
+        const pct = ((node.current / node.max) * 100).toFixed(1).replace(/\.0$/, '');
+        node.circle.setTooltipContent(node.short + ' · ' + node.current + '/' + node.max + ' · ' + pct + '%');
+        node.circle.setPopupContent(popupHtml(node));
+        syncHalo(node, status);
+      }
+
+      function drawRoutes(rows) {
+        routeLayer.clearLayers();
+        (rows || []).filter((row) => row.allocated > 0).forEach((row) => {
+          const node = state.nodes.find((item) => item.id === row.id);
+          if (!node) return;
+          const latlngs = [[DISPATCH.lat, DISPATCH.lng], [node.lat, node.lng]];
+          routeLayer.addLayer(L.polyline(latlngs, {
+            color: '#06b6d4',
+            weight: 8,
+            opacity: 0.18,
+            interactive: false
+          }));
+          const line = L.polyline(latlngs, {
+            color: '#67e8f9',
+            weight: 2.5,
+            opacity: 0.95,
+            dashArray: '7 11',
+            className: 'route-line',
+            interactive: false
+          });
+          line.bindTooltip(row.allocated + ' units → ' + node.short, { className: 'node-tip', opacity: 1 });
+          routeLayer.addLayer(line);
+        });
+      }
+
+      function focusNode(id) {
+        const node = state.nodes.find((item) => item.id === id);
+        if (!node || !map) return;
+        const zoom = Math.max(map.getZoom(), 13);
+        if (reduceMotion) map.setView([node.lat, node.lng], zoom);
+        else map.flyTo([node.lat, node.lng], zoom, { duration: 0.55 });
+        node.circle.openPopup();
+      }
+
+      function renderNodes(flashIds) {
+        const flashes = new Set(flashIds || []);
+        state.nodes.forEach((node) => {
+          let button = nodeList.querySelector('[data-id="' + node.id + '"]');
+          if (!button) {
+            button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'node';
+            button.dataset.id = node.id;
+            button.innerHTML = '<span class="node-top"><i class="dot"></i><span class="node-name"></span><span class="node-count"></span></span><span class="node-sub"><span class="tag"></span><span class="node-open"></span></span><span class="meter" aria-hidden="true"><span class="meter-fill"></span></span>';
+            button.addEventListener('click', () => focusNode(node.id));
+            nodeList.appendChild(button);
+          }
+          const status = statusOf(node);
+          button.classList.toggle('flash', flashes.has(node.id));
+          button.querySelector('.dot').style.color = STATUS_COLOR[status];
+          button.querySelector('.node-name').textContent = node.short;
+          button.querySelector('.node-name').title = node.name;
+          button.querySelector('.node-count').textContent = node.current + '/' + node.max;
+          const tag = button.querySelector('.tag');
+          tag.textContent = node.tag;
+          tag.dataset.tag = node.tag;
+          const open = node.max - node.current;
+          button.querySelector('.node-open').textContent = open === 0 ? 'No open beds' : open + ' open';
+          const fill = button.querySelector('.meter-fill');
+          fill.style.background = STATUS_COLOR[status];
+          const width = Math.max(2, (node.current / node.max) * 100) + '%';
+          if (!button.dataset.ready) {
+            fill.style.width = '0%';
+            requestAnimationFrame(() => { fill.style.width = width; });
+            button.dataset.ready = '1';
+          } else {
+            fill.style.width = width;
+          }
+          button.setAttribute('aria-label', node.name + ', ' + node.tag + ', ' + node.current + ' of ' + node.max + ' beds. Focus on map.');
+          syncNodeLayer(node);
+        });
+      }
+
+      function tweenNumber(el, to, format) {
+        const from = Number(el.dataset.val || '0');
+        el.dataset.val = String(to);
+        if (reduceMotion) {
+          el.textContent = format(to);
+          return;
+        }
+        const token = String(performance.now());
+        el.dataset.tween = token;
+        const start = performance.now();
+        const step = (now) => {
+          if (el.dataset.tween !== token) return;
+          const t = Math.min(1, (now - start) / 650);
+          const eased = 1 - Math.pow(1 - t, 3);
+          el.textContent = format(Math.round(from + (to - from) * eased));
+          if (t < 1) requestAnimationFrame(step);
+          else el.textContent = format(to);
+        };
+        requestAnimationFrame(step);
+      }
+
+      function renderKpis() {
+        const snap = networkSnapshot();
+        const loadEl = $('kpi-load');
+        const bedsEl = $('kpi-beds');
+        const critEl = $('kpi-critical');
+        const valveKpi = $('kpi-valve');
+        loadEl.className = snap.load > 95 ? 'crit' : snap.load >= 70 ? 'warn' : 'ok';
+        critEl.className = snap.critical > 0 ? 'crit' : 'ok';
+        valveKpi.className = state.valve.totalRouted > 0 ? 'amber' : '';
+        tweenNumber(loadEl, Math.round(snap.load), (n) => n + '%');
+        tweenNumber(bedsEl, snap.open, (n) => String(n));
+        tweenNumber(critEl, snap.critical, (n) => String(n));
+        tweenNumber(valveKpi, state.valve.totalRouted, (n) => String(n));
+        statusPill.className = 'pill ' + snap.worst;
+        statusText.textContent = snap.worst === 'crit' ? 'CRITICAL' : snap.worst === 'warn' ? 'STRAINED' : 'BALANCED';
+        const title = snap.critical
+          ? snap.critical + ' node' + (snap.critical === 1 ? '' : 's') + ' above 95% occupancy'
+          : snap.worst === 'warn'
+            ? 'Every node is between 70% and 95%'
+            : 'Every node is under 70% occupancy';
+        statusPill.title = title;
+      }
+
+      function renderValve() {
+        const valve = state.valve;
+        valveEl.classList.toggle('hot', valve.active);
+        if (valve.active) {
+          valveKicker.textContent = 'Critical override';
+          valveTitle.textContent = 'Release valve engaged';
+          valveCopy.textContent = valve.lastOverflow + ' ' + (valve.lastOverflow === 1 ? 'person' : 'people') + ' from the last wave had no open primary bed and moved to the NY-11 Emergency Foster & NGO Distributed Network.';
+          valveStat.textContent = 'Session total on the community grid: ' + valve.totalRouted;
+          mapAlert.hidden = false;
+          mapAlertCopy.textContent = valve.lastOverflow + ' unplaced ' + (valve.lastOverflow === 1 ? 'person is' : 'people are') + ' on the NY-11 Emergency Foster & NGO Distributed Network.';
+        } else {
+          valveKicker.textContent = 'Overflow path';
+          valveTitle.textContent = 'Release valve';
+          valveCopy.textContent = 'Standing by. Once every primary bed is full, overflow routes to the NY-11 Emergency Foster & NGO Distributed Network.';
+          valveStat.textContent = valve.totalRouted > 0
+            ? 'Session total already routed: ' + valve.totalRouted
+            : 'No overflow routed this session.';
+          mapAlert.hidden = true;
+        }
+      }
+
+      function renderAssign() {
+        const trace = state.trace;
+        if (!trace) {
+          assignCard.classList.remove('hot');
+          assignKicker.textContent = 'Primary vector';
+          assignName.textContent = 'Awaiting intake';
+          assignMeta.textContent = 'Vectors draw from entry dispatch to each node that receives people.';
+          return;
+        }
+        const placed = trace.rows.filter((row) => row.allocated > 0);
+        const top = placed[0];
+        assignCard.classList.toggle('hot', trace.overflow > 0);
+        if (!top) {
+          assignKicker.textContent = 'Critical override';
+          assignName.textContent = 'No open primary bed';
+          assignMeta.textContent = trace.overflow + ' units routed to the NY-11 Emergency Foster & NGO Distributed Network.';
+          return;
+        }
+        assignKicker.textContent = top.match ? 'Primary vector · match' : 'Primary vector';
+        assignName.textContent = top.name;
+        const bits = [top.allocated + ' units', 'score ' + top.score.toFixed(2), top.distanceKm.toFixed(1) + ' km'];
+        if (trace.overflow > 0) bits.push(trace.overflow + ' to NGO network');
+        assignMeta.textContent = bits.join(' · ');
+      }
+
+      function renderTrace() {
+        const trace = state.trace;
+        traceBody.replaceChildren();
+        if (!trace) {
+          traceWhen.textContent = 'No run yet';
+          const empty = document.createElement('p');
+          empty.className = 'empty-trace';
+          empty.textContent = 'Run an intake to see vacancies, match, distance, score, and where each person was placed.';
+          traceBody.appendChild(empty);
+          drawRoutes([]);
+          return;
+        }
+        traceWhen.textContent = trace.stamp + ' ET · ' + trace.intake + ' ' + trace.spec;
+        const table = document.createElement('table');
+        const thead = document.createElement('thead');
+        thead.innerHTML = '<tr><th>Node</th><th class="num">Vac</th><th>Match</th><th class="num">km</th><th class="num">Score</th><th class="num">Placed</th></tr>';
+        const tbody = document.createElement('tbody');
+        trace.rows.forEach((row) => {
+          const tr = document.createElement('tr');
+          if (row.disqualified) tr.className = 'dq';
+          else if (row.allocated > 0) tr.className = 'got';
+          const name = document.createElement('td');
+          name.className = 'name';
+          name.textContent = row.short;
+          name.title = row.name;
+          const vac = document.createElement('td');
+          vac.className = 'num';
+          vac.textContent = String(row.vacancies);
+          const match = document.createElement('td');
+          match.textContent = row.match ? 'Yes' : 'No';
+          const km = document.createElement('td');
+          km.className = 'num';
+          km.textContent = row.distanceKm.toFixed(2);
+          const score = document.createElement('td');
+          score.className = 'num';
+          score.textContent = row.disqualified ? 'DQ' : row.score.toFixed(2);
+          const placed = document.createElement('td');
+          placed.className = 'num placed';
+          placed.textContent = String(row.allocated);
+          tr.append(name, vac, match, km, score, placed);
+          tbody.appendChild(tr);
+        });
+        if (trace.overflow > 0) {
+          const tr = document.createElement('tr');
+          tr.className = 'overflow';
+          const name = document.createElement('td');
+          name.colSpan = 5;
+          name.textContent = 'NY-11 Emergency Foster & NGO Network';
+          const placed = document.createElement('td');
+          placed.className = 'num';
+          placed.textContent = String(trace.overflow);
+          tr.append(name, placed);
+          tbody.appendChild(tr);
+        }
+        table.append(thead, tbody);
+        traceBody.appendChild(table);
+        drawRoutes(trace.rows);
+      }
+
+      function renderChart() {
+        if (!chart) return;
+        chart.data.labels = state.nodes.map((node) => node.short);
+        chart.data.datasets[0].data = state.nodes.map((node) => (node.current / node.max) * 100);
+        chart.data.datasets[0].backgroundColor = state.nodes.map((node) => STATUS_COLOR[statusOf(node)]);
+        chart.update();
+      }
+
+      function render(flashIds) {
+        renderNodes(flashIds);
+        renderKpis();
+        renderValve();
+        renderAssign();
+        renderTrace();
+        renderChart();
+      }
+
+      function applyRun(intake, spec) {
+        const plan = planAllocation(state.nodes, intake, spec);
+        const placed = plan.rows.reduce((sum, row) => sum + row.allocated, 0);
+        if (placed + plan.overflow !== intake) {
+          console.error('Allocation invariant failed', { placed, overflow: plan.overflow, intake });
+        }
+        plan.rows.forEach((row) => {
+          if (!row.allocated) return;
+          const node = state.nodes.find((item) => item.id === row.id);
+          node.current += row.allocated;
+        });
+        const now = new Date();
+        state.trace = {
+          stamp: stamp(now),
+          iso: now.toISOString(),
+          intake,
+          spec,
+          overflow: plan.overflow,
+          rows: plan.rows
+        };
+        state.valve.active = plan.overflow > 0;
+        state.valve.lastOverflow = plan.overflow;
+        state.valve.totalRouted += plan.overflow;
+        state.valve.lastIntake = intake;
+        state.valve.lastSpec = spec;
+
+        const entries = [makeEntry('run', 'RUN:', 'Intake ' + intake + ' · constraint ' + spec + ' · dispatch 40.5895, -74.1154.')];
+        plan.rows.forEach((row) => {
+          if (row.disqualified) {
+            entries.push(makeEntry('score', 'SCORE:', row.name + ' · hard penalty · disqualified at maximum capacity.'));
+            return;
+          }
+          entries.push(makeEntry(
+            'score',
+            'SCORE:',
+            row.name + ' · ' + row.score.toFixed(2) + ' · ' + (row.match ? 'match' : 'no match') + ' · vac ' + row.vacancies + ' · ' + row.distanceKm.toFixed(2) + ' km.'
+          ));
+        });
+        plan.rows.forEach((row) => {
+          if (!row.allocated) return;
+          const after = row.before + row.allocated;
+          entries.push(makeEntry('alloc', 'ALLOC:', row.name + ' ← ' + row.allocated + ' units (' + row.before + ' → ' + after + ').'));
+          if (after >= row.max) {
+            entries.push(makeEntry('warning', 'WARNING:', row.name + ' reached maximum capacity.'));
+          }
+        });
+        if (plan.overflow > 0) {
+          entries.push(makeEntry('warning', 'WARNING:', 'Primary infrastructure saturated. Engaging community release valve grid.'));
+          entries.push(makeEntry('critical', 'CRITICAL:', plan.overflow + ' units routed to the NY-11 Emergency Foster & NGO Distributed Network.'));
+        } else {
+          entries.push(makeEntry('ok', 'OK:', 'Primary grid absorbed ' + intake + ' units. Release valve standing by.'));
+        }
+        pushLogs(entries, true);
+        saveMemory();
+        render(plan.rows.filter((row) => row.allocated > 0).map((row) => row.id));
+      }
+
+      function restoreBaseline() {
+        state.nodes.forEach((node) => { node.current = node.baseline; });
+        state.trace = null;
+        state.valve = { active: false, lastOverflow: 0, totalRouted: 0, lastIntake: 0, lastSpec: specSelect.value };
+        pushLogs([makeEntry('sys', 'SYS:', 'Baseline restored. Nodes returned to opening occupancy and vectors cleared.')], true);
+        saveMemory();
+        render();
+      }
+
+      function clearLog() {
+        state.logs = [];
+        logEl.replaceChildren();
+        const empty = document.createElement('p');
+        empty.id = 'log-empty';
+        empty.textContent = 'Telemetry channel idle. Execute a run to record the matrix.';
+        logEl.appendChild(empty);
+        pushLogs([makeEntry('sys', 'SYS:', 'Telemetry buffer cleared.')], true);
+        saveMemory();
+      }
+
+      function setBusy(busy) {
+        executeBtn.disabled = busy;
+        executeBtn.textContent = busy ? 'Computing…' : 'Execute balance matrix';
+        document.querySelectorAll('#presets button, #reset, #clear-log').forEach((button) => {
+          button.disabled = busy;
+        });
+        document.body.dataset.state = busy ? 'running' : 'idle';
+      }
+
+      function delay(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      async function onSubmit(event) {
+        event.preventDefault();
+        if (state.running) return;
+        const parsed = readIntake();
+        if (parsed.error) {
+          showError(parsed.error);
+          intakeInput.focus();
+          return;
+        }
+        showError('');
+        state.running = true;
+        setBusy(true);
+        overlay.classList.remove('on');
+        void overlay.offsetWidth;
+        overlay.classList.add('on');
+        overlay.setAttribute('aria-hidden', 'false');
+        try {
+          await delay(1000);
+          applyRun(parsed.intake, parsed.spec);
+        } finally {
+          overlay.classList.remove('on');
+          overlay.setAttribute('aria-hidden', 'true');
+          state.running = false;
+          setBusy(false);
+        }
+      }
+
+      function bootError(message) {
+        const app = $('app');
+        app.replaceChildren();
+        const card = document.createElement('section');
+        card.className = 'boot-error glass';
+        const title = document.createElement('h1');
+        title.textContent = 'NetShelter cannot start';
+        const copy = document.createElement('p');
+        copy.textContent = message;
+        card.append(title, copy);
+        app.appendChild(card);
+      }
+
+      function renderClock() {
+        clockEl.textContent = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hourCycle: 'h23'
+        }).format(new Date()) + ' ET';
+      }
+
+      function initMap() {
+        map = L.map('map', {
+          zoomControl: false,
+          attributionControl: true,
+          minZoom: 10,
+          maxZoom: 16
+        }).setView(MAP_CENTER, 11);
+        L.control.zoom({ position: 'topright' }).addTo(map);
+        // CARTO Dark Matter now returns an API-key watermark instead of geography.
+        // Esri World Dark Gray Canvas is the keyless dark municipal basemap.
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+          maxZoom: 16,
+          maxNativeZoom: 16
+        }).addTo(map);
+        map.createPane('labels');
+        const labelPane = map.getPane('labels');
+        labelPane.style.zIndex = 250;
+        labelPane.style.pointerEvents = 'none';
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+          pane: 'labels',
+          maxZoom: 16,
+          maxNativeZoom: 16,
+          opacity: 0.9
+        }).addTo(map);
+        map.createPane('halos');
+        map.getPane('halos').style.zIndex = 350;
+        map.getPane('halos').style.pointerEvents = 'none';
+        routeLayer = L.layerGroup().addTo(map);
+        const dispatchIcon = L.divIcon({
+          className: 'dispatch-wrap',
+          html: '<div class="dispatch-pin"><i></i><em>Entry dispatch</em></div>',
+          iconSize: [150, 28],
+          iconAnchor: [14, 14]
+        });
+        const dispatchMarker = L.marker([DISPATCH.lat, DISPATCH.lng], {
+          icon: dispatchIcon,
+          zIndexOffset: 900,
+          title: 'NY-11 Entry Dispatch'
+        }).addTo(map);
+        dispatchMarker.bindPopup(
+          '<div class="pop"><div class="pop-tag">Fixed origin</div><strong>NY-11 Entry Dispatch</strong><p>Every intake wave starts here, at 40.5895, −74.1154, before the matrix assigns beds.</p></div>'
+        );
+      }
+
+      function initChart() {
+        const context = $('capacity-chart');
+        chart = new Chart(context, {
+          type: 'bar',
+          data: {
+            labels: state.nodes.map((node) => node.short),
+            datasets: [{
+              label: 'Occupancy',
+              data: state.nodes.map((node) => (node.current / node.max) * 100),
+              backgroundColor: state.nodes.map((node) => STATUS_COLOR[statusOf(node)]),
+              borderWidth: 0,
+              borderRadius: 7,
+              barThickness: 16
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: reduceMotion ? 0 : 700, easing: 'easeOutCubic' },
+            onClick(event, elements) {
+              if (!elements.length) return;
+              focusNode(state.nodes[elements[0].index].id);
+            },
+            onHover(event, elements) {
+              const target = event.native && event.native.target;
+              if (target) target.style.cursor = elements.length ? 'pointer' : 'default';
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.96)',
+                borderColor: 'rgba(255,255,255,0.08)',
+                borderWidth: 1,
+                titleFont: { family: 'Outfit' },
+                bodyFont: { family: '"IBM Plex Mono", monospace' },
+                callbacks: {
+                  title(items) {
+                    return state.nodes[items[0].dataIndex].name;
+                  },
+                  label(item) {
+                    const node = state.nodes[item.dataIndex];
+                    return ' ' + node.current + ' / ' + node.max + ' beds · ' + item.parsed.x.toFixed(1) + '%';
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                min: 0,
+                max: 100,
+                ticks: {
+                  color: '#8ea0b8',
+                  stepSize: 25,
+                  font: { family: '"IBM Plex Mono", monospace', size: 10 },
+                  callback: (value) => value + '%'
+                },
+                grid: { color: 'rgba(255,255,255,0.06)' },
+                border: { display: false }
+              },
+              y: {
+                ticks: { color: '#e7eef8', font: { family: 'Outfit, sans-serif', size: 12 } },
+                grid: { display: false },
+                border: { display: false }
+              }
+            }
+          },
+          plugins: [{
+            id: 'urgentThreshold',
+            afterDatasetsDraw(chartInstance) {
+              const xScale = chartInstance.scales.x;
+              const yScale = chartInstance.scales.y;
+              if (!xScale || !yScale) return;
+              const x = xScale.getPixelForValue(95);
+              const ctx = chartInstance.ctx;
+              ctx.save();
+              ctx.beginPath();
+              ctx.setLineDash([4, 4]);
+              ctx.strokeStyle = 'rgba(239, 68, 68, 0.75)';
+              ctx.lineWidth = 1;
+              ctx.moveTo(x, yScale.top);
+              ctx.lineTo(x, yScale.bottom);
+              ctx.stroke();
+              ctx.fillStyle = 'rgba(252, 165, 165, 0.95)';
+              ctx.font = '10px "IBM Plex Mono", monospace';
+              ctx.fillText('95%', x + 4, yScale.top + 10);
+              ctx.restore();
+            }
+          }]
+        });
+      }
+
+      function boot() {
+        if (!window.L || !window.Chart) {
+          bootError('Leaflet or Chart.js did not load. Reconnect and reload. Both libraries are required for the map and the capacity chart.');
+          return;
+        }
+        loadMemory();
+        initMap();
+        initChart();
+        state.logs.forEach(paintLog);
+        render();
+        pushLogs([makeEntry('sys', 'SYS:', 'Matrix online. Four NY-11 nodes synced from local memory. Dispatch locked at 40.5895, -74.1154.')], false);
+        renderClock();
+        setInterval(renderClock, 1000);
+        $('intake-form').addEventListener('submit', onSubmit);
+        intakeInput.addEventListener('wheel', () => intakeInput.blur(), { passive: true });
+        $('presets').addEventListener('click', (event) => {
+          const button = event.target.closest('button');
+          if (!button || state.running) return;
+          intakeInput.value = button.dataset.intake;
+          specSelect.value = button.dataset.spec;
+          $('intake-form').requestSubmit();
+        });
+        $('reset').addEventListener('click', () => {
+          if (!state.running) restoreBaseline();
+        });
+        $('clear-log').addEventListener('click', () => {
+          if (!state.running) clearLog();
+        });
+        window.addEventListener('resize', () => map.invalidateSize());
+        setTimeout(() => map.invalidateSize(), 180);
+        requestAnimationFrame(() => map.invalidateSize());
+      }
+
+      window.NetShelter = {
+        planAllocation,
+        haversineKm,
+        statusOf,
+        DISPATCH,
+        getState: () => ({
+          nodes: state.nodes.map(({ id, name, short, current, max, tag, lat, lng }) => ({ id, name, short, current, max, tag, lat, lng })),
+          valve: { ...state.valve },
+          trace: state.trace
+        })
+      };
+
+      boot();
+    })();
+  </script>
+</body>
+</html>
