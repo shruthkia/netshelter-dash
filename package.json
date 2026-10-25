@@ -1,14 +1,14 @@
 {
-  "name": "netshelter-capacity-matrix",
-  "version": "0.0.0",
+  "name": "netshelter",
+  "version": "1.0.0",
   "private": true,
-  "type": "module",
+  "description": "NetShelter: Capacity Load-Balancing Matrix — NY-11 Congressional App Challenge civic dashboard",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0 --port 4317 --strictPort",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview --host 0.0.0.0 --port 4317"
   },
   "devDependencies": {
-    "vite": "^8.3.4"
+    "vite": "^5.4.10"
   }
 }

@@ -1,769 +1,1145 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#070b12" />
-  <title>NetShelter — Capacity Load-Balancing Matrix</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <style>
-    :root {
-      --bg: #070b12;
-      --panel: rgba(15, 23, 42, .68);
-      --panel-solid: #0d1524;
-      --line: rgba(255, 255, 255, .08);
-      --muted: #77859b;
-      --text: #edf5ff;
-      --cyan: #06b6d4;
-      --cyan-bright: #54e8ff;
-      --emerald: #10b981;
-      --amber: #f59e0b;
-      --crimson: #ef4444;
-      --violet: #8b5cf6;
-      --radius: 22px;
-      --mono: "Space Mono", monospace;
-      --sans: "DM Sans", sans-serif;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NetShelter · Capacity Load-Balancing Matrix</title>
+<meta name="description" content="NetShelter: a civic capacity load-balancing dashboard for NY-11 shelters. Built for the Congressional App Challenge." />
 
-    * { box-sizing: border-box; }
-    html { background: var(--bg); }
-    body {
-      margin: 0;
-      min-width: 320px;
-      min-height: 100vh;
-      color: var(--text);
-      font-family: var(--sans);
-      background:
-        radial-gradient(circle at 68% -10%, rgba(6,182,212,.10), transparent 28rem),
-        radial-gradient(circle at -5% 58%, rgba(139,92,246,.08), transparent 26rem),
-        var(--bg);
-      overflow-x: hidden;
-    }
-    button, input, select { font: inherit; }
-    button { color: inherit; }
-    ::selection { color: #031117; background: var(--cyan-bright); }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-thumb { background: #26344a; border-radius: 8px; }
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
 
-    .shell {
-      width: min(1800px, 100%);
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .topbar {
-      height: 74px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-      padding: 0 8px 18px;
-    }
-    .brand { display: flex; align-items: center; gap: 13px; }
-    .brand-mark {
-      width: 42px; height: 42px; border-radius: 13px;
-      display: grid; place-items: center;
-      background: linear-gradient(145deg, #78f2ff, #06b6d4 50%, #06758e);
-      color: #031117;
-      box-shadow: 0 0 28px rgba(6,182,212,.28), inset 0 1px rgba(255,255,255,.7);
-    }
-    .brand-mark svg { width: 24px; }
-    .brand-title { font-weight: 700; font-size: 20px; letter-spacing: -.04em; }
-    .brand-title span { color: var(--cyan-bright); }
-    .brand-sub { color: var(--muted); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; margin-top: 2px; }
-    .top-actions { display: flex; align-items: center; gap: 10px; }
-    .live-pill, .district-pill {
-      display: flex; align-items: center; gap: 8px;
-      border: 1px solid var(--line);
-      background: rgba(14, 22, 36, .7);
-      border-radius: 99px;
-      padding: 9px 13px;
-      font: 700 10px var(--mono);
-      letter-spacing: .09em;
-      color: #a8b7ca;
-    }
-    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--emerald); box-shadow: 0 0 12px var(--emerald); animation: breathe 2s infinite; }
-    .district-pill { color: var(--cyan-bright); }
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-    .layout {
-      display: grid;
-      grid-template-columns: 350px minmax(0, 1fr);
-      gap: 16px;
-      align-items: stretch;
-    }
-    .sidebar { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-    .main { display: grid; gap: 16px; min-width: 0; }
-    .glass {
-      background: var(--panel);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: 0 16px 50px rgba(0,0,0,.2), inset 0 1px rgba(255,255,255,.025);
-    }
-    .card { padding: 21px; }
-    .eyebrow {
-      display: flex; align-items: center; gap: 8px;
-      margin-bottom: 8px;
-      font: 700 9px var(--mono);
-      letter-spacing: .18em;
-      color: var(--cyan-bright);
-      text-transform: uppercase;
-    }
-    .eyebrow::before { content: ""; width: 18px; height: 1px; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
-    h1, h2, h3, p { margin: 0; }
-    h1 { font-size: 25px; line-height: 1.05; letter-spacing: -.045em; max-width: 280px; }
-    .lede { color: #8b99ad; font-size: 12px; line-height: 1.55; margin: 11px 0 21px; }
-    .input-label { display: block; margin: 14px 0 7px; font: 700 9px var(--mono); letter-spacing: .1em; color: #93a3b8; text-transform: uppercase; }
-    .field-wrap { position: relative; }
-    .field-wrap input, .field-wrap select {
-      width: 100%; height: 48px; color: #e9faff;
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: 13px; outline: none;
-      background: rgba(4, 9, 17, .72);
-      padding: 0 43px 0 14px;
-      transition: .2s ease;
-    }
-    .field-wrap select { appearance: none; cursor: pointer; }
-    .field-wrap input:focus, .field-wrap select:focus { border-color: rgba(6,182,212,.7); box-shadow: 0 0 0 3px rgba(6,182,212,.1); }
-    .field-icon {
-      position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
-      color: var(--cyan); pointer-events: none; font: 700 11px var(--mono);
-    }
-    .execute {
-      width: 100%; height: 51px; margin-top: 18px; border: 0; border-radius: 14px;
-      color: #021218; background: linear-gradient(135deg, #6ef2ff, #06b6d4);
-      font: 700 11px var(--mono); letter-spacing: .08em; text-transform: uppercase;
-      box-shadow: 0 12px 28px rgba(6,182,212,.18), inset 0 1px rgba(255,255,255,.65);
-      cursor: pointer; transition: transform .2s, filter .2s, box-shadow .2s;
-    }
-    .execute:hover { transform: translateY(-2px); filter: brightness(1.08); box-shadow: 0 16px 35px rgba(6,182,212,.28); }
-    .execute:active { transform: translateY(0); }
-    .execute:disabled { opacity: .65; cursor: wait; }
-    .formula {
-      margin-top: 14px; padding: 11px 12px;
-      border-radius: 12px; background: rgba(6,182,212,.055);
-      border: 1px solid rgba(6,182,212,.13);
-      color: #7898a7; font: 400 9px/1.55 var(--mono);
-    }
-    .formula strong { color: var(--cyan-bright); }
+<style>
+  :root {
+    --bg: #070b12;
+    --glass: rgba(15, 23, 42, 0.65);
+    --glass-strong: rgba(15, 23, 42, 0.85);
+    --line: rgba(255, 255, 255, 0.08);
+    --line-strong: rgba(255, 255, 255, 0.14);
+    --text: #e6edf7;
+    --muted: #8b98ad;
+    --dim: #5b6779;
+    --cyan: #06b6d4;
+    --cyan-soft: rgba(6, 182, 212, 0.14);
+    --emerald: #10b981;
+    --emerald-soft: rgba(16, 185, 129, 0.14);
+    --amber: #f59e0b;
+    --amber-soft: rgba(245, 158, 11, 0.14);
+    --crimson: #ef4444;
+    --crimson-soft: rgba(239, 68, 68, 0.14);
+    --violet: #8b5cf6;
+    --violet-soft: rgba(139, 92, 246, 0.16);
+    --lime: #d9f99d;
+    --sun: #fde047;
+    --radius-xl: 28px;
+    --radius-lg: 22px;
+    --radius-md: 16px;
+    --ease: cubic-bezier(.2, .8, .2, 1);
+  }
 
-    .console { min-height: 276px; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .console-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 13px; }
-    .console-title { display: flex; align-items: center; gap: 8px; font: 700 10px var(--mono); letter-spacing: .08em; }
-    .terminal-dots { display: flex; gap: 4px; }
-    .terminal-dots i { width: 6px; height: 6px; border-radius: 50%; background: #354258; }
-    .terminal-dots i:first-child { background: var(--crimson); }
-    .terminal-dots i:nth-child(2) { background: var(--amber); }
-    .terminal-dots i:last-child { background: var(--emerald); }
-    .log-list { flex: 1; height: 212px; overflow: auto; padding-right: 4px; }
-    .log-row {
-      display: grid; grid-template-columns: auto 1fr; gap: 8px;
-      padding: 7px 0; color: #7d8da4;
-      font: 400 9px/1.55 var(--mono);
-      border-bottom: 1px solid rgba(255,255,255,.035);
-      animation: slideIn .35s ease both;
-    }
-    .log-time { color: #46556b; }
-    .log-row.success .log-copy { color: #68d7b1; }
-    .log-row.warning .log-copy { color: #f3bd64; }
-    .log-row.system .log-copy { color: #74dae9; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
 
-    .map-card { min-height: 516px; overflow: hidden; position: relative; isolation: isolate; }
-    #map { height: 516px; width: 100%; background: #081018; z-index: 1; }
-    .map-card::after { content:""; pointer-events:none; position:absolute; inset:0; border-radius:inherit; box-shadow: inset 0 0 50px rgba(0,0,0,.32); z-index:2; }
-    .map-header {
-      position: absolute; z-index: 500; top: 17px; left: 17px; right: 17px;
-      display: flex; align-items: flex-start; justify-content: space-between; pointer-events: none;
-    }
-    .map-title {
-      padding: 12px 14px; border: 1px solid rgba(255,255,255,.09); border-radius: 13px;
-      background: rgba(5,11,20,.82); backdrop-filter: blur(14px);
-      box-shadow: 0 8px 24px rgba(0,0,0,.24);
-    }
-    .map-title h2 { font-size: 13px; letter-spacing: -.01em; }
-    .map-title p { color: #738399; font: 400 8px var(--mono); letter-spacing: .09em; margin-top: 4px; text-transform: uppercase; }
-    .legend {
-      padding: 10px 12px; display: flex; align-items: center; gap: 12px;
-      border: 1px solid rgba(255,255,255,.09); border-radius: 12px;
-      background: rgba(5,11,20,.82); backdrop-filter: blur(14px);
-      font: 700 8px var(--mono); color: #9ba9ba;
-    }
-    .legend span { display: flex; align-items: center; gap: 5px; }
-    .legend i { width: 6px; height: 6px; border-radius: 50%; }
-    .legend .safe { background: var(--emerald); box-shadow: 0 0 6px var(--emerald); }
-    .legend .watch { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
-    .legend .critical { background: var(--crimson); box-shadow: 0 0 6px var(--crimson); }
+  /* Ambient backdrop: soft colour blobs + grid, like a command-center wall */
+  body::before {
+    content: "";
+    position: fixed; inset: 0; z-index: -2;
+    background:
+      radial-gradient(600px 420px at 8% 0%, rgba(139, 92, 246, 0.18), transparent 60%),
+      radial-gradient(700px 500px at 100% 10%, rgba(6, 182, 212, 0.14), transparent 60%),
+      radial-gradient(600px 500px at 60% 110%, rgba(16, 185, 129, 0.10), transparent 60%);
+  }
+  body::after {
+    content: "";
+    position: fixed; inset: 0; z-index: -1;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+    pointer-events: none;
+  }
 
-    .metrics-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-    .stat { padding: 16px 17px; min-height: 96px; position: relative; overflow: hidden; transition: border .3s, transform .3s; }
-    .stat:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.14); }
-    .stat::after { content: ""; position: absolute; width: 70px; height: 70px; border-radius: 50%; right: -30px; top: -35px; background: var(--glow, var(--cyan)); filter: blur(28px); opacity: .13; }
-    .stat-label { color: #78879b; font: 700 8px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
-    .stat-value { display: flex; align-items: baseline; gap: 5px; margin-top: 9px; font-size: 27px; font-weight: 700; letter-spacing: -.05em; }
-    .stat-value small { font: 400 9px var(--mono); color: #65758b; letter-spacing: 0; }
-    .stat-foot { margin-top: 4px; color: #526176; font: 400 8px var(--mono); }
-    .stat-status { --glow: var(--emerald); }
-    .stat-overflow { --glow: var(--amber); }
+  .glass {
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
 
-    .bottom-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(270px, .8fr); gap: 16px; }
-    .chart-card { padding: 19px 20px 15px; min-height: 272px; }
-    .section-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-    .section-head h3 { font-size: 14px; }
-    .section-head p { color: #69798f; font: 400 8px var(--mono); margin-top: 4px; letter-spacing: .06em; }
-    .mini-chip { padding: 6px 9px; border-radius: 8px; color: var(--cyan-bright); background: rgba(6,182,212,.08); border: 1px solid rgba(6,182,212,.14); font: 700 8px var(--mono); }
-    .chart-wrap { height: 205px; }
+  .fade-in { animation: fadeUp .6s var(--ease) both; }
+  .fade-in:nth-child(2) { animation-delay: .06s; }
+  .fade-in:nth-child(3) { animation-delay: .12s; }
+  .fade-in:nth-child(4) { animation-delay: .18s; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 
-    .allocation-card { padding: 19px; min-height: 272px; }
-    .allocation-list { margin-top: 15px; display: grid; gap: 8px; }
-    .allocation-item {
-      padding: 11px 12px; border-radius: 12px;
-      background: rgba(3,8,16,.5); border: 1px solid rgba(255,255,255,.055);
-      display: grid; grid-template-columns: 1fr auto; gap: 7px; align-items: center;
-      animation: fadeUp .4s ease both;
-    }
-    .allocation-item strong { font-size: 10px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .allocation-item span { color: #617188; font: 400 8px var(--mono); }
-    .allocation-count { color: var(--cyan-bright); font: 700 15px var(--mono); }
-    .empty-allocation {
-      min-height: 150px; display: grid; place-content: center; text-align: center;
-      color: #536176; font: 400 9px/1.7 var(--mono);
-    }
-    .empty-icon { width: 38px; height: 38px; border-radius: 12px; margin: 0 auto 10px; display: grid; place-items: center; color: #678096; border: 1px dashed #344157; }
+  /* ---------- Layout ---------- */
+  .app {
+    display: grid;
+    grid-template-columns: 380px minmax(0, 1fr);
+    gap: 18px;
+    padding: 18px;
+    min-height: 100vh;
+  }
+  .sidebar {
+    display: flex; flex-direction: column; gap: 16px;
+    position: sticky; top: 18px;
+    height: calc(100vh - 36px);
+    min-height: 0;
+  }
+  .main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 
-    .override {
-      display: none; margin-top: 16px; padding: 17px 19px; border-radius: 16px;
-      border: 1px solid rgba(245,158,11,.35);
-      background: linear-gradient(90deg, rgba(245,158,11,.12), rgba(239,68,68,.055));
-      box-shadow: 0 0 25px rgba(245,158,11,.07);
-    }
-    .override.active { display: flex; align-items: center; justify-content: space-between; gap: 20px; animation: alertIn .45s ease both; }
-    .override-title { display: flex; align-items: center; gap: 11px; color: #ffd58c; font-size: 12px; font-weight: 700; }
-    .warning-icon { width: 30px; height: 30px; border-radius: 9px; background: rgba(245,158,11,.15); display: grid; place-items: center; color: var(--amber); font: 700 15px var(--mono); }
-    .override p { color: #9f8563; font: 400 8px/1.5 var(--mono); margin: 4px 0 0 41px; }
-    .override-count { flex: none; text-align: right; color: #ffd181; font: 700 20px var(--mono); }
-    .override-count small { display: block; color: #7f6a50; font-size: 7px; letter-spacing: .1em; margin-top: 3px; }
+  /* ---------- Brand card (mascot) ---------- */
+  .brand {
+    position: relative; overflow: hidden;
+    padding: 22px 22px 20px;
+    background:
+      radial-gradient(260px 160px at 100% 0%, rgba(139, 92, 246, 0.45), transparent 70%),
+      linear-gradient(145deg, rgba(76, 29, 149, 0.55), rgba(15, 23, 42, 0.7));
+  }
+  .brand-top { display: flex; align-items: center; justify-content: space-between; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    padding: 6px 11px; border-radius: 999px;
+    background: rgba(255,255,255,0.08); border: 1px solid var(--line-strong);
+  }
+  .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--emerald); box-shadow: 0 0 10px var(--emerald); animation: blink 2s infinite; }
+  @keyframes blink { 50% { opacity: .35; } }
+  .brand h1 {
+    font-family: "Fraunces", serif; font-weight: 800;
+    font-size: 40px; line-height: 1; letter-spacing: -0.02em;
+    margin-top: 16px;
+  }
+  .brand h1 span { color: var(--sun); }
+  .brand p { color: #c4b5fd; font-weight: 600; margin-top: 6px; max-width: 200px; }
+  .mascot {
+    position: absolute; right: -8px; bottom: -14px; width: 138px; height: 138px;
+    animation: bob 4s ease-in-out infinite;
+    filter: drop-shadow(0 14px 22px rgba(0,0,0,.45));
+  }
+  @keyframes bob { 50% { transform: translateY(-6px) rotate(-2deg); } }
 
-    .reset-btn {
-      margin-top: 11px; border: 0; padding: 0; background: transparent; color: #526176;
-      font: 700 8px var(--mono); cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
-      transition: color .2s;
-    }
-    .reset-btn:hover { color: #a6b8cc; }
-    .leaflet-control-zoom a { color: #9cadc1 !important; background: rgba(7,13,23,.92) !important; border-color: rgba(255,255,255,.08) !important; }
-    .leaflet-control-attribution { color: #58667a !important; background: rgba(4,9,17,.7) !important; font-size: 8px !important; }
-    .leaflet-control-attribution a { color: #7991a8 !important; }
-    .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-      color: #dceaff; background: rgba(8,15,26,.96); border: 1px solid rgba(255,255,255,.09);
-      box-shadow: 0 14px 35px rgba(0,0,0,.4);
-    }
-    .leaflet-popup-content-wrapper { border-radius: 14px; }
-    .facility-popup { min-width: 180px; font-family: var(--sans); }
-    .popup-tag { color: var(--cyan-bright); font: 700 7px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
-    .facility-popup h4 { margin: 5px 0 11px; font-size: 13px; }
-    .popup-data { display: flex; justify-content: space-between; color: #718299; font: 400 9px var(--mono); }
-    .popup-data b { color: #e5f3ff; }
-    .popup-track { height: 5px; background: #1b2635; border-radius: 5px; margin-top: 9px; overflow: hidden; }
-    .popup-fill { height: 100%; border-radius: 5px; }
-    .dispatch-label {
-      color: #09131b; background: var(--cyan-bright); border: 0; box-shadow: 0 4px 15px rgba(6,182,212,.25);
-      font: 700 7px var(--mono); padding: 3px 6px;
-    }
-    .dispatch-label::before { border-top-color: var(--cyan-bright) !important; }
-    .leaflet-interactive.critical-node { animation: mapPulse 1.45s infinite; transform-box: fill-box; transform-origin: center; }
+  /* ---------- Panels ---------- */
+  .panel { padding: 20px; }
+  .panel-title {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin-bottom: 14px;
+  }
+  .panel-title h2 {
+    font-family: "Fraunces", serif; font-weight: 700; font-size: 20px; letter-spacing: -0.01em;
+  }
+  .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 
-    .loading {
-      position: fixed; inset: 0; z-index: 9999; display: none; place-items: center;
-      background: rgba(3,7,13,.86); backdrop-filter: blur(14px);
-    }
-    .loading.active { display: grid; animation: fadeIn .2s ease; }
-    .loader-core { width: min(460px, calc(100vw - 40px)); text-align: center; }
-    .matrix-orbit { width: 76px; height: 76px; margin: auto; position: relative; border: 1px solid rgba(6,182,212,.25); border-radius: 50%; }
-    .matrix-orbit::before, .matrix-orbit::after { content:""; position:absolute; border-radius:50%; inset: 9px; border: 1px dashed var(--cyan); animation: spin 1s linear infinite; }
-    .matrix-orbit::after { inset: 24px; background: var(--cyan); box-shadow: 0 0 22px var(--cyan); border: 0; animation: breathe .7s infinite alternate; }
-    .loading h3 { margin-top: 24px; color: #91f4ff; font: 700 11px var(--mono); letter-spacing: .14em; }
-    .scan-track { height: 2px; margin-top: 17px; overflow: hidden; background: #142132; }
-    .scan-track i { display: block; width: 42%; height: 100%; background: var(--cyan-bright); box-shadow: 0 0 12px var(--cyan); animation: scan 1s ease-in-out infinite; }
-    .loading p { color: #52647a; font: 400 8px var(--mono); margin-top: 10px; letter-spacing: .08em; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
 
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes scan { from { transform: translateX(-110%); } to { transform: translateX(340%); } }
-    @keyframes breathe { 50% { opacity: .42; } }
-    @keyframes mapPulse { 0%,100% { filter: drop-shadow(0 0 2px #ef4444); opacity: .78; } 50% { filter: drop-shadow(0 0 9px #ef4444); opacity: 1; } }
-    @keyframes slideIn { from { opacity: 0; transform: translateX(-8px); } }
-    @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } }
-    @keyframes fadeIn { from { opacity: 0; } }
-    @keyframes alertIn { from { opacity: 0; transform: scale(.985); } }
+  .stepper {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(2, 6, 23, 0.6); border: 1px solid var(--line-strong);
+    border-radius: 18px; padding: 6px;
+    transition: border-color .25s var(--ease), box-shadow .25s var(--ease);
+  }
+  .stepper:focus-within { border-color: var(--cyan); box-shadow: 0 0 0 4px var(--cyan-soft); }
+  .stepper.invalid { border-color: var(--crimson); box-shadow: 0 0 0 4px var(--crimson-soft); }
+  .stepper button {
+    width: 42px; height: 42px; flex: none; border-radius: 13px; border: 0; cursor: pointer;
+    background: rgba(255,255,255,0.06); color: var(--text); font-size: 20px; font-weight: 700;
+    transition: background .2s, transform .15s;
+  }
+  .stepper button:hover { background: var(--cyan-soft); color: var(--cyan); }
+  .stepper button:active { transform: scale(.94); }
+  .stepper input {
+    flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--text);
+    font-family: "Fraunces", serif; font-weight: 700; font-size: 28px; text-align: center;
+    -moz-appearance: textfield;
+  }
+  .stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .error-text { color: #fca5a5; font-size: 12px; font-weight: 600; margin-top: 6px; min-height: 16px; }
 
-    @media (max-width: 1080px) {
-      .layout { grid-template-columns: 310px minmax(0, 1fr); }
-      .metrics-row { grid-template-columns: repeat(2, 1fr); }
-      .bottom-grid { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 760px) {
-      .shell { padding: 12px; }
-      .topbar { height: auto; padding: 7px 2px 16px; }
-      .district-pill { display: none; }
-      .layout { grid-template-columns: 1fr; }
-      .sidebar { display: contents; }
-      .control-card { order: 1; }
-      .main { display: contents; }
-      .map-card { order: 2; min-height: 430px; }
-      #map { height: 430px; }
-      .metrics-row { order: 3; grid-template-columns: repeat(2, 1fr); }
-      .override { order: 4; }
-      .bottom-grid { order: 5; }
-      .console { order: 6; min-height: 260px; }
-      .legend { gap: 7px; }
-      .legend span { font-size: 0; gap: 0; }
-      .legend i { width: 8px; height: 8px; }
-    }
-    @media (max-width: 430px) {
-      .brand-sub { display: none; }
-      .brand-title { font-size: 17px; }
-      .live-pill { padding: 8px 10px; font-size: 8px; }
-      .card { padding: 18px; }
-      .metrics-row { gap: 8px; }
-      .stat { padding: 14px; }
-      .stat-value { font-size: 23px; }
-      .override.active { align-items: flex-start; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
-    }
-  </style>
+  .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .chip {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 12px 6px; border-radius: 18px; cursor: pointer;
+    background: rgba(255,255,255,0.04); border: 1px solid var(--line);
+    color: var(--muted); font-weight: 700; font-size: 12px; text-align: center;
+    transition: all .25s var(--ease);
+  }
+  .chip .ico { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; font-size: 17px; background: rgba(255,255,255,0.06); transition: all .25s var(--ease); }
+  .chip:hover { border-color: var(--line-strong); color: var(--text); transform: translateY(-2px); }
+  .chip.active { color: var(--text); border-color: rgba(6,182,212,.55); background: linear-gradient(180deg, rgba(6,182,212,.18), rgba(6,182,212,.05)); box-shadow: 0 10px 24px -12px rgba(6,182,212,.7); }
+  .chip.active .ico { background: var(--cyan); color: #032029; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    border: 0; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 14px;
+    border-radius: 999px; padding: 15px 22px;
+    transition: transform .2s var(--ease), box-shadow .25s var(--ease), background .25s, opacity .2s;
+  }
+  .btn:disabled { opacity: .55; cursor: not-allowed; transform: none !important; }
+  .btn-primary {
+    width: 100%; color: #021a20;
+    background: linear-gradient(90deg, #22d3ee, var(--cyan));
+    box-shadow: 0 12px 30px -10px rgba(6,182,212,.75), inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 18px 38px -10px rgba(6,182,212,.9), inset 0 1px 0 rgba(255,255,255,.4); }
+  .btn-primary:active:not(:disabled) { transform: translateY(0) scale(.98); }
+  .btn-ghost {
+    flex: 1; color: var(--text); padding: 11px 14px; font-size: 12px;
+    background: rgba(255,255,255,0.05); border: 1px solid var(--line);
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,0.09); border-color: var(--line-strong); transform: translateY(-1px); }
+  .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+
+  /* ---------- Console ---------- */
+  .console { display: flex; flex-direction: column; flex: 1; min-height: 220px; padding: 18px; }
+  .console-body {
+    flex: 1; overflow-y: auto; min-height: 0;
+    background: rgba(2, 6, 23, 0.7); border: 1px solid var(--line); border-radius: 18px;
+    padding: 12px; font-family: "JetBrains Mono", monospace; font-size: 11.5px; line-height: 1.6;
+    scrollbar-width: thin; scrollbar-color: #1f2a3c transparent;
+  }
+  .log { display: flex; gap: 8px; padding: 3px 0; animation: logIn .45s var(--ease) both; border-bottom: 1px dashed rgba(255,255,255,.04); }
+  @keyframes logIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+  .log .ts { color: var(--dim); flex: none; }
+  .log .lvl { flex: none; font-weight: 700; }
+  .log .msg { color: #cbd5e1; word-break: break-word; }
+  .log.info .lvl { color: var(--cyan); }
+  .log.ok .lvl { color: var(--emerald); }
+  .log.warn .lvl { color: var(--amber); }
+  .log.crit .lvl { color: var(--crimson); }
+  .log.crit .msg { color: #fecaca; }
+  .cursor { display: inline-block; width: 7px; height: 13px; background: var(--cyan); vertical-align: middle; animation: blink 1s steps(1) infinite; }
+  .icon-btn {
+    border: 1px solid var(--line); background: rgba(255,255,255,.05); color: var(--muted);
+    border-radius: 12px; padding: 6px 10px; font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit;
+    transition: all .2s;
+  }
+  .icon-btn:hover { color: var(--text); border-color: var(--line-strong); }
+
+  /* ---------- Header ---------- */
+  .header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 22px; flex-wrap: wrap; }
+  .header h2 { font-family: "Fraunces", serif; font-size: 30px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.05; }
+  .header h2 b { font-weight: 800; }
+  .header .sub { color: var(--muted); font-weight: 600; margin-top: 4px; font-size: 13px; }
+  .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px;
+    background: rgba(255,255,255,.05); border: 1px solid var(--line); font-weight: 700; font-size: 12px;
+    transition: all .4s var(--ease);
+  }
+  .pill .mono { font-family: "JetBrains Mono", monospace; font-weight: 500; }
+  .status-pill.balanced { color: var(--emerald); background: var(--emerald-soft); border-color: rgba(16,185,129,.35); }
+  .status-pill.strained { color: var(--amber); background: var(--amber-soft); border-color: rgba(245,158,11,.35); }
+  .status-pill.critical { color: #fca5a5; background: var(--crimson-soft); border-color: rgba(239,68,68,.45); animation: critGlow 1.6s infinite; }
+  @keyframes critGlow { 50% { box-shadow: 0 0 22px -4px rgba(239,68,68,.7); } }
+  .status-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+
+  /* ---------- Stat tiles ---------- */
+  .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+  .tile {
+    position: relative; overflow: hidden; padding: 18px; border-radius: var(--radius-lg);
+    border: 1px solid var(--line); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    transition: transform .3s var(--ease), border-color .3s;
+  }
+  .tile:hover { transform: translateY(-3px); border-color: var(--line-strong); }
+  .tile .eyebrow { color: inherit; opacity: .8; }
+  .tile .val { font-family: "Fraunces", serif; font-weight: 800; font-size: 34px; line-height: 1.1; margin-top: 8px; letter-spacing: -0.02em; color: var(--text); }
+  .tile .val small { font-size: 15px; font-weight: 600; color: var(--muted); margin-left: 3px; }
+  .tile .note { color: var(--muted); font-size: 12px; font-weight: 600; margin-top: 2px; }
+  .tile .orb { position: absolute; right: -18px; top: -18px; width: 80px; height: 80px; border-radius: 50%; opacity: .5; filter: blur(2px); }
+  .tile.cyan { background: linear-gradient(160deg, rgba(6,182,212,.22), rgba(15,23,42,.65) 60%); color: #67e8f9; }
+  .tile.cyan .orb { background: radial-gradient(circle, var(--cyan), transparent 70%); }
+  .tile.violet { background: linear-gradient(160deg, rgba(139,92,246,.26), rgba(15,23,42,.65) 60%); color: #c4b5fd; }
+  .tile.violet .orb { background: radial-gradient(circle, var(--violet), transparent 70%); }
+  .tile.emerald { background: linear-gradient(160deg, rgba(16,185,129,.22), rgba(15,23,42,.65) 60%); color: #6ee7b7; }
+  .tile.emerald .orb { background: radial-gradient(circle, var(--emerald), transparent 70%); }
+  .tile.amber { background: linear-gradient(160deg, rgba(245,158,11,.22), rgba(15,23,42,.65) 60%); color: #fcd34d; }
+  .tile.amber .orb { background: radial-gradient(circle, var(--amber), transparent 70%); }
+  .meter { height: 8px; border-radius: 999px; background: rgba(255,255,255,.07); margin-top: 12px; overflow: hidden; }
+  .meter > i { display: block; height: 100%; border-radius: 999px; background: currentColor; transition: width .8s var(--ease), background .4s; }
+
+  /* ---------- Map ---------- */
+  .map-card { position: relative; padding: 10px; }
+  #map { height: clamp(380px, 52vh, 620px); border-radius: 22px; overflow: hidden; background: #0b1220; z-index: 0; }
+  .map-overlay-top {
+    position: absolute; top: 24px; left: 24px; right: 24px; z-index: 500;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; pointer-events: none;
+  }
+  .map-overlay-top > * { pointer-events: auto; }
+  .map-title {
+    padding: 12px 16px; border-radius: 18px; background: var(--glass-strong); border: 1px solid var(--line);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  .map-title strong { font-family: "Fraunces", serif; font-size: 17px; display: block; }
+  .map-title span { color: var(--muted); font-size: 12px; font-weight: 600; }
+  .legend {
+    display: flex; gap: 12px; flex-wrap: wrap; padding: 10px 14px; border-radius: 16px;
+    background: var(--glass-strong); border: 1px solid var(--line); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    font-size: 11px; font-weight: 700; color: var(--muted);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .map-fab {
+    position: absolute; right: 24px; bottom: 24px; z-index: 500;
+    padding: 10px 14px; font-size: 12px;
+    background: var(--glass-strong); color: var(--text); border: 1px solid var(--line);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  .map-fab:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  .leaflet-container { font-family: "Plus Jakarta Sans", sans-serif; }
+  .leaflet-popup-content-wrapper {
+    background: rgba(10, 16, 30, 0.92); color: var(--text); border-radius: 20px;
+    border: 1px solid var(--line-strong); backdrop-filter: blur(12px);
+    box-shadow: 0 20px 40px -10px rgba(0,0,0,.7);
+  }
+  .leaflet-popup-content { margin: 16px 18px; min-width: 220px; }
+  .leaflet-popup-tip { background: rgba(10, 16, 30, 0.92); border: 1px solid var(--line-strong); }
+  .leaflet-container a.leaflet-popup-close-button { color: var(--muted); top: 8px; right: 8px; }
+  .leaflet-control-zoom a { background: var(--glass-strong) !important; color: var(--text) !important; border-color: var(--line) !important; }
+  .leaflet-control-attribution { background: rgba(7, 11, 18, .7) !important; color: var(--dim) !important; font-size: 10px; }
+  .leaflet-control-attribution a { color: var(--muted) !important; }
+  .leaflet-bar { border: 1px solid var(--line) !important; border-radius: 14px !important; overflow: hidden; }
+
+  .pop h4 { font-family: "Fraunces", serif; font-size: 17px; line-height: 1.2; }
+  .pop .tag { display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; background: var(--violet-soft); color: #c4b5fd; }
+  .pop .row { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; color: var(--muted); font-weight: 600; }
+  .pop .row b { color: var(--text); font-family: "JetBrains Mono", monospace; }
+  .pop .bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,.08); margin-top: 8px; overflow: hidden; }
+  .pop .bar i { display: block; height: 100%; border-radius: 999px; }
+  .pop .state { margin-top: 10px; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+
+  .node-crit { animation: pulseRed 1.3s ease-in-out infinite; }
+  @keyframes pulseRed {
+    0%, 100% { stroke-width: 3; stroke-opacity: 1; fill-opacity: .55; }
+    50% { stroke-width: 16; stroke-opacity: .25; fill-opacity: .85; }
+  }
+  .route-line { animation: dashFlow 1.2s linear infinite; filter: drop-shadow(0 0 6px rgba(6,182,212,.9)); }
+  .route-line.amber { filter: drop-shadow(0 0 6px rgba(245,158,11,.9)); }
+  @keyframes dashFlow { to { stroke-dashoffset: -36; } }
+
+  .dispatch-icon {
+    width: 26px; height: 26px; border-radius: 9px; transform: rotate(45deg);
+    background: var(--cyan); border: 3px solid #e0fbff;
+    box-shadow: 0 0 0 6px rgba(6,182,212,.25), 0 0 24px rgba(6,182,212,.9);
+  }
+  .ngo-icon { width: 14px; height: 14px; border-radius: 50%; background: var(--amber); border: 2px solid #fff7e6; box-shadow: 0 0 0 5px rgba(245,158,11,.25), 0 0 18px rgba(245,158,11,.9); animation: ngoPop .5s var(--ease) both; }
+  @keyframes ngoPop { from { transform: scale(0); } to { transform: scale(1); } }
+  .node-label {
+    background: rgba(10,16,30,.85); color: var(--text); border: 1px solid var(--line-strong); border-radius: 10px;
+    font-family: "Plus Jakarta Sans", sans-serif; font-weight: 700; font-size: 11px; padding: 4px 8px; box-shadow: none;
+  }
+  .node-label::before { display: none; }
+
+  /* ---------- Bottom analytics ---------- */
+  .bottom { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 18px; }
+  .chart-wrap { position: relative; height: 280px; }
+
+  .results-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px;
+    min-height: 240px; color: var(--muted); font-weight: 600;
+  }
+  .results-empty svg { width: 86px; height: 86px; opacity: .9; }
+  .alloc-list { display: flex; flex-direction: column; gap: 10px; }
+  .alloc {
+    display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 18px; background: rgba(255,255,255,.035); border: 1px solid var(--line);
+    animation: fadeUp .5s var(--ease) both;
+    transition: border-color .25s, background .25s;
+  }
+  .alloc:hover { border-color: var(--line-strong); background: rgba(255,255,255,.06); }
+  .alloc .rank { width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center; font-family: "Fraunces", serif; font-weight: 800; font-size: 16px; background: var(--cyan-soft); color: var(--cyan); }
+  .alloc.top .rank { background: var(--cyan); color: #032029; box-shadow: 0 0 18px -2px rgba(6,182,212,.8); }
+  .alloc.skip .rank { background: rgba(255,255,255,.06); color: var(--dim); }
+  .alloc.dq .rank { background: var(--crimson-soft); color: var(--crimson); }
+  .alloc .name { font-weight: 700; font-size: 13px; line-height: 1.25; }
+  .alloc .meta { color: var(--muted); font-size: 11px; font-family: "JetBrains Mono", monospace; margin-top: 2px; }
+  .alloc .units { font-family: "Fraunces", serif; font-weight: 800; font-size: 20px; color: var(--emerald); text-align: right; }
+  .alloc.skip .units, .alloc.dq .units { color: var(--dim); font-size: 14px; }
+
+  .valve {
+    margin-top: 12px; padding: 14px; border-radius: 20px;
+    background: repeating-linear-gradient(135deg, rgba(245,158,11,.14) 0 12px, rgba(245,158,11,.06) 12px 24px);
+    border: 1px solid rgba(245,158,11,.55); color: #fde68a;
+    box-shadow: 0 0 30px -8px rgba(245,158,11,.55);
+    animation: fadeUp .5s var(--ease) both, valveGlow 2s ease-in-out infinite;
+  }
+  @keyframes valveGlow { 50% { box-shadow: 0 0 44px -6px rgba(245,158,11,.8); } }
+  .valve .head { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; font-size: 11px; color: var(--amber); }
+  .valve .head .warn-ico { width: 28px; height: 28px; border-radius: 10px; background: var(--amber); color: #2a1a00; display: grid; place-items: center; font-size: 15px; }
+  .valve .big { font-family: "Fraunces", serif; font-weight: 800; font-size: 22px; color: #fff7e6; margin-top: 8px; line-height: 1.2; }
+  .valve p { font-size: 12px; margin-top: 4px; color: #fcd34d; font-weight: 600; }
+  .ok-banner { margin-top: 12px; padding: 12px 14px; border-radius: 18px; background: var(--emerald-soft); border: 1px solid rgba(16,185,129,.4); color: #a7f3d0; font-weight: 700; font-size: 12px; animation: fadeUp .5s var(--ease) both; }
+
+  /* ---------- Compute overlay ---------- */
+  .overlay {
+    position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center;
+    background: rgba(3, 6, 12, 0.72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    opacity: 0; visibility: hidden; transition: opacity .3s var(--ease), visibility .3s;
+  }
+  .overlay.show { opacity: 1; visibility: visible; }
+  .overlay-card { text-align: center; padding: 34px 40px; width: min(440px, 90vw); transform: scale(.94); transition: transform .35s var(--ease); }
+  .overlay.show .overlay-card { transform: scale(1); }
+  .ring { width: 96px; height: 96px; margin: 0 auto 20px; position: relative; }
+  .ring::before, .ring::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 3px solid transparent; }
+  .ring::before { border-top-color: var(--cyan); border-right-color: var(--cyan); animation: spin .9s linear infinite; filter: drop-shadow(0 0 8px var(--cyan)); }
+  .ring::after { inset: 14px; border-bottom-color: var(--violet); border-left-color: var(--violet); animation: spin 1.3s linear infinite reverse; }
+  .ring svg { position: absolute; inset: 24px; width: 48px; height: 48px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .overlay h3 {
+    font-family: "JetBrains Mono", monospace; font-weight: 700; font-size: 14px; letter-spacing: .14em; color: var(--cyan);
+    text-shadow: 0 0 14px rgba(6,182,212,.9), 0 0 30px rgba(6,182,212,.5);
+  }
+  .overlay .sub { color: var(--muted); font-size: 12px; margin-top: 8px; font-family: "JetBrains Mono", monospace; min-height: 18px; }
+  .progress { height: 6px; border-radius: 999px; background: rgba(255,255,255,.08); margin-top: 18px; overflow: hidden; }
+  .progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--violet), var(--cyan)); box-shadow: 0 0 12px var(--cyan); border-radius: 999px; }
+  .overlay.show .progress i { animation: fill 1s linear forwards; }
+  @keyframes fill { to { width: 100%; } }
+
+  .footer-note { text-align: center; color: var(--dim); font-size: 11px; font-weight: 600; padding: 4px 0 8px; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 1280px) {
+    .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .bottom { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 980px) {
+    .app { grid-template-columns: 1fr; padding: 12px; gap: 14px; }
+    .sidebar { position: static; height: auto; }
+    .console { min-height: 300px; max-height: 380px; }
+    .header h2 { font-size: 24px; }
+  }
+  @media (max-width: 560px) {
+    .tiles { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .tile { padding: 14px; }
+    .tile .val { font-size: 26px; }
+    .brand h1 { font-size: 34px; }
+    .legend { display: none; }
+    .map-overlay-top { top: 18px; left: 18px; right: 18px; }
+    #map { height: 420px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+  }
+</style>
 </head>
 <body>
-  <div class="shell">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M4 19V9l8-5 8 5v10"/><path d="M8 19v-6h8v6M2 19h20"/><path d="M12 7v3m-1.5-1.5h3"/></svg>
-        </div>
-        <div>
-          <div class="brand-title">Net<span>Shelter</span></div>
-          <div class="brand-sub">Capacity Load-Balancing Matrix</div>
-        </div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="blobGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fef08a" />
+      <stop offset="1" stop-color="#facc15" />
+    </linearGradient>
+    <symbol id="mascot" viewBox="0 0 140 140">
+      <path d="M70 14c10 0 14 10 20 10s12-8 18-2-2 14 2 20c10 14 14 30 12 46-3 26-24 40-52 40S19 114 17 88c-2-18 4-34 14-46 4-6-6-14 0-20s12 2 18 2 11-10 21-10z" fill="url(#blobGrad)" />
+      <ellipse cx="42" cy="86" rx="9" ry="6" fill="#f9a8d4" opacity=".85" />
+      <ellipse cx="98" cy="86" rx="9" ry="6" fill="#f9a8d4" opacity=".85" />
+      <circle cx="54" cy="70" r="13" fill="none" stroke="#1e1b4b" stroke-width="4" />
+      <circle cx="86" cy="70" r="13" fill="none" stroke="#1e1b4b" stroke-width="4" />
+      <path d="M67 70h6" stroke="#1e1b4b" stroke-width="4" stroke-linecap="round" />
+      <path d="M49 71q5-5 10 0M81 71q5-5 10 0" stroke="#1e1b4b" stroke-width="3.5" fill="none" stroke-linecap="round" />
+      <path d="M60 94q10 9 20 0" stroke="#1e1b4b" stroke-width="4" fill="none" stroke-linecap="round" />
+    </symbol>
+  </defs>
+</svg>
+
+<div class="app">
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar">
+    <section class="glass brand fade-in">
+      <div class="brand-top">
+        <span class="badge"><span class="dot"></span>NY-11 · Live</span>
       </div>
-      <div class="top-actions">
-        <div class="district-pill">NY-11 · STATEN ISLAND</div>
-        <div class="live-pill"><i class="live-dot"></i> NETWORK ONLINE</div>
+      <h1>Net<span>Shelter</span></h1>
+      <p>Keeping every Staten Island bed in balance.</p>
+      <svg class="mascot" aria-hidden="true"><use href="#mascot" /></svg>
+    </section>
+
+    <section class="glass panel fade-in">
+      <div class="panel-title">
+        <h2>Intake Simulation</h2>
+        <span class="eyebrow">Dispatch</span>
+      </div>
+
+      <form id="intakeForm" novalidate>
+        <div class="field">
+          <label for="intakeSize">Incoming individuals</label>
+          <div class="stepper" id="stepper">
+            <button type="button" data-step="-1" aria-label="Decrease intake size">−</button>
+            <input id="intakeSize" type="number" inputmode="numeric" min="1" max="500" step="1" value="12" />
+            <button type="button" data-step="1" aria-label="Increase intake size">+</button>
+          </div>
+          <div class="error-text" id="intakeError" role="alert"></div>
+        </div>
+
+        <div class="field">
+          <label id="specLabel">Specialization constraint</label>
+          <select id="specialization" class="visually-hidden" aria-labelledby="specLabel">
+            <option value="General">General</option>
+            <option value="Medical Rehab">Medical Rehab</option>
+            <option value="Juvenile">Juvenile</option>
+          </select>
+          <div class="chips" role="radiogroup" aria-labelledby="specLabel">
+            <button type="button" class="chip active" data-spec="General" role="radio" aria-checked="true"><span class="ico">⌂</span>General</button>
+            <button type="button" class="chip" data-spec="Medical Rehab" role="radio" aria-checked="false"><span class="ico">✚</span>Medical Rehab</button>
+            <button type="button" class="chip" data-spec="Juvenile" role="radio" aria-checked="false"><span class="ico">★</span>Juvenile</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="runBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Run Balance Matrix
+        </button>
+        <div class="btn-row">
+          <button type="button" class="btn btn-ghost" id="dischargeBtn">↺ Discharge cycle</button>
+          <button type="button" class="btn btn-ghost" id="resetBtn">⟲ Reset network</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="glass console fade-in">
+      <div class="panel-title">
+        <h2>Live Telemetry</h2>
+        <button class="icon-btn" id="clearLogs" type="button">Clear</button>
+      </div>
+      <div class="console-body" id="console" aria-live="polite"></div>
+    </section>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <main class="main">
+    <header class="glass header fade-in">
+      <div>
+        <h2>Capacity <b>Load-Balancing Matrix</b></h2>
+        <div class="sub">Staten Island &amp; South Brooklyn shelter grid · Congressional App Challenge</div>
+      </div>
+      <div class="header-right">
+        <span class="pill"><span>🕒</span><span class="mono" id="clock">--:--:--</span></span>
+        <span class="pill status-pill balanced" id="statusPill"><span class="dot"></span><span id="statusText">Balanced</span></span>
       </div>
     </header>
 
-    <div class="layout">
-      <aside class="sidebar">
-        <section class="glass card control-card">
-          <div class="eyebrow">Dispatch control</div>
-          <h1>Balance intake across the district.</h1>
-          <p class="lede">Model live shelter capacity and route residents to the safest available placement.</p>
-          <form id="intakeForm">
-            <label class="input-label" for="intakeSize">Incoming intake size</label>
-            <div class="field-wrap">
-              <input id="intakeSize" type="number" min="1" max="500" value="18" required aria-describedby="intakeHelp" />
-              <span class="field-icon">PPL</span>
-            </div>
-            <label class="input-label" for="specialization">Care specialization</label>
-            <div class="field-wrap">
-              <select id="specialization" aria-label="Care specialization">
-                <option>General</option>
-                <option>Medical Rehab</option>
-                <option>Juvenile</option>
-              </select>
-              <span class="field-icon">⌄</span>
-            </div>
-            <button class="execute" id="executeBtn" type="submit">Execute balance matrix →</button>
-          </form>
-          <div class="formula" id="intakeHelp"><strong>WEIGHT MODEL</strong><br>0.5(Vacancy) + 30(Match) − 0.2(Distance km)</div>
-          <button class="reset-btn" id="resetBtn" type="button">Reset local simulation data</button>
-        </section>
+    <section class="tiles">
+      <div class="tile cyan fade-in">
+        <div class="orb"></div>
+        <div class="eyebrow">Network load</div>
+        <div class="val" id="tLoad">0<small>%</small></div>
+        <div class="meter"><i id="tLoadBar" style="width:0%"></i></div>
+      </div>
+      <div class="tile violet fade-in">
+        <div class="orb"></div>
+        <div class="eyebrow">Beds occupied</div>
+        <div class="val" id="tOcc">0<small>/ 0</small></div>
+        <div class="note" id="tOccNote">across 4 facilities</div>
+      </div>
+      <div class="tile emerald fade-in">
+        <div class="orb"></div>
+        <div class="eyebrow">Open vacancies</div>
+        <div class="val" id="tVac">0</div>
+        <div class="note" id="tVacNote">ready for dispatch</div>
+      </div>
+      <div class="tile amber fade-in">
+        <div class="orb"></div>
+        <div class="eyebrow">NGO overflow routed</div>
+        <div class="val" id="tOverflow">0</div>
+        <div class="note" id="tRuns">0 simulations run</div>
+      </div>
+    </section>
 
-        <section class="glass card console">
-          <div class="console-head">
-            <div class="console-title"><span style="color:var(--cyan)">⌁</span> LIVE TELEMETRY</div>
-            <div class="terminal-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+    <section class="glass map-card fade-in">
+      <div id="map" role="region" aria-label="Shelter facility map"></div>
+      <div class="map-overlay-top">
+        <div class="map-title">
+          <strong>Staten Island Grid</strong>
+          <span>4 facility nodes · Dispatch HQ at Todt Hill corridor</span>
+        </div>
+        <div class="legend">
+          <span><i style="background:#10b981"></i>&lt;70%</span>
+          <span><i style="background:#f59e0b"></i>70–95%</span>
+          <span><i style="background:#ef4444"></i>&gt;95%</span>
+          <span><i style="background:#06b6d4;border-radius:3px"></i>Dispatch</span>
+        </div>
+      </div>
+      <button class="btn map-fab" id="recenter" type="button">◎ Recenter</button>
+    </section>
+
+    <section class="bottom">
+      <div class="glass panel fade-in">
+        <div class="panel-title">
+          <h2>Live Capacity Status</h2>
+          <span class="eyebrow">Occupied vs. vacant beds</span>
+        </div>
+        <div class="chart-wrap"><canvas id="capacityChart" aria-label="Capacity chart"></canvas></div>
+      </div>
+
+      <div class="glass panel fade-in">
+        <div class="panel-title">
+          <h2>Allocation Plan</h2>
+          <span class="eyebrow" id="planMeta">Awaiting run</span>
+        </div>
+        <div id="results">
+          <div class="results-empty">
+            <svg aria-hidden="true"><use href="#mascot" /></svg>
+            <div>No batch dispatched yet.<br />Set an intake size and run the matrix.</div>
           </div>
-          <div class="log-list" id="logList" aria-live="polite"></div>
-        </section>
-      </aside>
+        </div>
+      </div>
+    </section>
 
-      <main class="main">
-        <section class="glass map-card" aria-label="NY-11 shelter network map">
-          <div class="map-header">
-            <div class="map-title">
-              <h2>District Resource Grid</h2>
-              <p>Live GIS occupancy telemetry</p>
-            </div>
-            <div class="legend" aria-label="Map occupancy legend">
-              <span><i class="safe"></i> BALANCED</span>
-              <span><i class="watch"></i> WATCH</span>
-              <span><i class="critical"></i> CRITICAL</span>
-            </div>
-          </div>
-          <div id="map"></div>
-        </section>
+    <div class="footer-note">All data is simulated and stored locally in your browser · NetShelter for NY-11</div>
+  </main>
+</div>
 
-        <section class="metrics-row" aria-label="Network metrics">
-          <article class="glass stat"><div class="stat-label">Network occupancy</div><div class="stat-value"><span id="occupancyMetric">—</span><small>%</small></div><div class="stat-foot" id="occupancyFoot">Calculating district load</div></article>
-          <article class="glass stat"><div class="stat-label">Open placements</div><div class="stat-value"><span id="vacancyMetric">—</span><small>BEDS</small></div><div class="stat-foot">Across primary infrastructure</div></article>
-          <article class="glass stat"><div class="stat-label">Facilities online</div><div class="stat-value"><span id="facilityMetric">4</span><small>/ 4</small></div><div class="stat-foot">All nodes reporting</div></article>
-          <article class="glass stat stat-status" id="systemStat"><div class="stat-label">System state</div><div class="stat-value"><span id="stateMetric">STABLE</span></div><div class="stat-foot" id="stateFoot">Matrix ready for dispatch</div></article>
-        </section>
-
-        <section class="override" id="overridePanel" role="alert">
-          <div>
-            <div class="override-title"><span class="warning-icon">!</span> Community release valve engaged</div>
-            <p>Overflow routed to NY-11 Emergency Foster &amp; NGO Distributed Network.</p>
-          </div>
-          <div class="override-count"><span id="overflowCount">0</span><small>PLACEMENTS ROUTED</small></div>
-        </section>
-
-        <section class="bottom-grid">
-          <article class="glass chart-card">
-            <div class="section-head">
-              <div><h3>Facility Load Analysis</h3><p>REAL-TIME CAPACITY UTILIZATION</p></div>
-              <span class="mini-chip">LIVE DATA</span>
-            </div>
-            <div class="chart-wrap"><canvas id="capacityChart" role="img" aria-label="Horizontal bar chart showing shelter capacity utilization"></canvas></div>
-          </article>
-          <article class="glass allocation-card">
-            <div class="section-head">
-              <div><h3>Latest Distribution</h3><p>PRIORITY ROUTING OUTPUT</p></div>
-              <span class="mini-chip" id="allocationTotal">0 MOVED</span>
-            </div>
-            <div class="allocation-list" id="allocationList">
-              <div class="empty-allocation"><div><div class="empty-icon">↗</div>Awaiting intake matrix execution.<br>Route output will appear here.</div></div>
-            </div>
-          </article>
-        </section>
-      </main>
-    </div>
+<div class="overlay" id="overlay" aria-hidden="true">
+  <div class="glass overlay-card">
+    <div class="ring"><svg aria-hidden="true"><use href="#mascot" /></svg></div>
+    <h3>COMPUTING SYSTEM BALANCE MATRIX...</h3>
+    <div class="sub" id="overlaySub">Scoring facility vectors</div>
+    <div class="progress"><i></i></div>
   </div>
+</div>
 
-  <div class="loading" id="loadingOverlay" aria-hidden="true" aria-live="assertive">
-    <div class="loader-core">
-      <div class="matrix-orbit"></div>
-      <h3>COMPUTING SYSTEM BALANCE MATRIX...</h3>
-      <div class="scan-track"><i></i></div>
-      <p>Evaluating vacancy · specialization · travel distance</p>
-    </div>
-  </div>
+<script>
+(() => {
+  "use strict";
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-  <script>
-    (() => {
-      "use strict";
+  const STORAGE_KEY = "netshelter.state.v1";
+  const DISPATCH = { name: "NY-11 Central Dispatch", lat: 40.5895, lng: -74.1154 };
+  const MAP_CENTER = [40.5795, -74.1154];
+  const MAX_LOGS = 120;
 
-      const STORAGE_KEY = "netshelter.matrix.v1";
-      const DISPATCH = { lat: 40.5895, lng: -74.1154 };
-      const DEFAULT_FACILITIES = [
-        { id: "st-george", name: "St. George Intake Hub", lat: 40.6445, lng: -74.0805, max: 100, current: 96, tag: "General" },
-        { id: "south-shore", name: "South Shore Safe-Haven", lat: 40.5242, lng: -74.2045, max: 50, current: 44, tag: "Juvenile" },
-        { id: "new-dorp", name: "New Dorp Rehab Point", lat: 40.5735, lng: -74.1112, max: 30, current: 28, tag: "Medical Rehab" },
-        { id: "bay-ridge", name: "Bay Ridge Transit Point", lat: 40.6254, lng: -74.0298, max: 120, current: 102, tag: "General" }
-      ];
+  const DEFAULT_FACILITIES = [
+    { id: "stgeorge",  name: "St. George Intake Hub",   lat: 40.6445, lng: -74.0805, max: 100, current: 96,  tag: "General" },
+    { id: "southshore", name: "South Shore Safe-Haven", lat: 40.5242, lng: -74.2045, max: 50,  current: 44,  tag: "Juvenile" },
+    { id: "newdorp",   name: "New Dorp Rehab Point",    lat: 40.5735, lng: -74.1112, max: 30,  current: 28,  tag: "Medical Rehab" },
+    { id: "bayridge",  name: "Bay Ridge Transit Point", lat: 40.6254, lng: -74.0298, max: 120, current: 102, tag: "General" }
+  ];
 
-      const els = {
-        form: document.querySelector("#intakeForm"),
-        intake: document.querySelector("#intakeSize"),
-        specialization: document.querySelector("#specialization"),
-        execute: document.querySelector("#executeBtn"),
-        reset: document.querySelector("#resetBtn"),
-        loader: document.querySelector("#loadingOverlay"),
-        log: document.querySelector("#logList"),
-        occupancy: document.querySelector("#occupancyMetric"),
-        occupancyFoot: document.querySelector("#occupancyFoot"),
-        vacancy: document.querySelector("#vacancyMetric"),
-        state: document.querySelector("#stateMetric"),
-        stateFoot: document.querySelector("#stateFoot"),
-        systemStat: document.querySelector("#systemStat"),
-        override: document.querySelector("#overridePanel"),
-        overflow: document.querySelector("#overflowCount"),
-        allocations: document.querySelector("#allocationList"),
-        allocationTotal: document.querySelector("#allocationTotal")
-      };
+  const NGO_NODES = [
+    { name: "Port Richmond Foster Partners", lat: 40.6330, lng: -74.1360 },
+    { name: "Great Kills Family Network",    lat: 40.5540, lng: -74.1510 },
+    { name: "Tottenville Faith Coalition",   lat: 40.5110, lng: -74.2420 },
+    { name: "Stapleton Mutual Aid House",    lat: 40.6265, lng: -74.0775 },
+    { name: "Willowbrook Youth NGO",         lat: 40.6030, lng: -74.1500 }
+  ];
 
-      const loadState = () => {
-        try {
-          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-          if (saved && Array.isArray(saved.facilities) && saved.facilities.length === DEFAULT_FACILITIES.length) return saved;
-        } catch (error) {
-          console.warn("Local simulation frame could not be read.", error);
-        }
-        return { facilities: structuredClone(DEFAULT_FACILITIES), overflow: 0, runCount: 0 };
-      };
+  const COLORS = { green: "#10b981", amber: "#f59e0b", red: "#ef4444", cyan: "#06b6d4" };
 
-      let state = loadState();
-      let chart;
-      let routeLines = [];
-      const markerById = new Map();
+  // ---------------- State ----------------
+  const clone = (o) => JSON.parse(JSON.stringify(o));
 
-      const map = L.map("map", { zoomControl: false, attributionControl: true }).setView([40.5795, -74.1154], 11);
-      L.control.zoom({ position: "bottomright" }).addTo(map);
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-        maxZoom: 19,
-        subdomains: "abcd",
-        attribution: "&copy; OpenStreetMap &copy; CARTO"
-      }).addTo(map);
+  function freshState() {
+    return { facilities: clone(DEFAULT_FACILITIES), overflowTotal: 0, runs: 0, logs: [], lastResult: null };
+  }
 
-      const dispatchMarker = L.circleMarker([DISPATCH.lat, DISPATCH.lng], {
-        radius: 5, color: "#54e8ff", weight: 2, fillColor: "#07131b", fillOpacity: 1
-      }).addTo(map);
-      dispatchMarker.bindTooltip("DISPATCH CORE", { permanent: true, direction: "top", className: "dispatch-label", offset: [0, -5] });
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return freshState();
+      const s = JSON.parse(raw);
+      if (!Array.isArray(s.facilities) || s.facilities.length !== DEFAULT_FACILITIES.length) return freshState();
+      return Object.assign(freshState(), s);
+    } catch (e) {
+      return freshState();
+    }
+  }
 
-      function occupancyOf(facility) { return (facility.current / facility.max) * 100; }
-      function statusOf(facility) {
-        const occupancy = occupancyOf(facility);
-        if (occupancy > 95) return { key: "critical", color: "#ef4444", label: "Critical" };
-        if (occupancy >= 70) return { key: "watch", color: "#f59e0b", label: "Watch" };
-        return { key: "balanced", color: "#10b981", label: "Balanced" };
+  function saveState() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* storage full or disabled */ }
+  }
+
+  let state = loadState();
+
+  // ---------------- Helpers ----------------
+  const $ = (id) => document.getElementById(id);
+  const occPct = (f) => (f.max ? f.current / f.max : 0) * 100;
+  const vacancies = (f) => Math.max(0, f.max - f.current);
+  const statusColor = (pct) => (pct > 95 ? COLORS.red : pct >= 70 ? COLORS.amber : COLORS.green);
+  const statusLabel = (pct) => (pct >= 100 ? "Saturated" : pct > 95 ? "Critical" : pct >= 70 ? "Elevated" : "Balanced");
+  const timestamp = () => new Date().toLocaleTimeString("en-US", { hour12: false });
+  const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function haversineKm(a, b) {
+    const R = 6371;
+    const toRad = (d) => (d * Math.PI) / 180;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+
+  // ---------------- Telemetry console ----------------
+  const consoleEl = $("console");
+  const LEVEL_TAG = { info: "INFO", ok: "OK", warn: "WARNING", crit: "CRITICAL" };
+
+  function renderLogRow(entry) {
+    const row = document.createElement("div");
+    row.className = "log " + entry.level;
+    row.innerHTML =
+      `<span class="ts">[${escapeHtml(entry.t)}]</span>` +
+      `<span class="lvl">${LEVEL_TAG[entry.level]}:</span>` +
+      `<span class="msg">${escapeHtml(entry.msg)}</span>`;
+    return row;
+  }
+
+  function renderCursor() {
+    let cur = consoleEl.querySelector(".cursor-row");
+    if (cur) cur.remove();
+    cur = document.createElement("div");
+    cur.className = "cursor-row";
+    cur.innerHTML = `<span style="color:var(--dim)">netshelter@ny11:~$</span> <span class="cursor"></span>`;
+    consoleEl.appendChild(cur);
+  }
+
+  function log(level, msg) {
+    const entry = { t: timestamp(), level, msg };
+    state.logs.push(entry);
+    if (state.logs.length > MAX_LOGS) state.logs.splice(0, state.logs.length - MAX_LOGS);
+    const cur = consoleEl.querySelector(".cursor-row");
+    consoleEl.insertBefore(renderLogRow(entry), cur);
+    while (consoleEl.querySelectorAll(".log").length > MAX_LOGS) consoleEl.querySelector(".log").remove();
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+
+  function renderAllLogs() {
+    consoleEl.innerHTML = "";
+    state.logs.forEach((e) => consoleEl.appendChild(renderLogRow(e)));
+    renderCursor();
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+
+  // ---------------- Map ----------------
+  const map = L.map("map", { zoomControl: true, attributionControl: true }).setView(MAP_CENTER, 12);
+  map.zoomControl.setPosition("bottomleft");
+
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: "abcd",
+    maxZoom: 19
+  }).addTo(map);
+
+  L.marker([DISPATCH.lat, DISPATCH.lng], {
+    icon: L.divIcon({ className: "", html: '<div class="dispatch-icon"></div>', iconSize: [26, 26], iconAnchor: [13, 13] }),
+    zIndexOffset: 1000,
+    keyboard: true,
+    title: DISPATCH.name
+  })
+    .addTo(map)
+    .bindPopup(`<div class="pop"><h4>${DISPATCH.name}</h4><span class="tag" style="background:var(--cyan-soft);color:#67e8f9">Entry dispatch</span><div class="row"><span>Coordinates</span><b>${DISPATCH.lat.toFixed(4)}, ${DISPATCH.lng.toFixed(4)}</b></div></div>`);
+
+  const routeLayer = L.layerGroup().addTo(map);
+  const ngoLayer = L.layerGroup().addTo(map);
+  const markers = {};
+
+  function popupHtml(f) {
+    const pct = occPct(f);
+    const col = statusColor(pct);
+    const dist = haversineKm(DISPATCH, f);
+    return `<div class="pop">
+      <h4>${escapeHtml(f.name)}</h4>
+      <span class="tag">${escapeHtml(f.tag)}</span>
+      <div class="row"><span>Occupancy</span><b>${f.current} / ${f.max}</b></div>
+      <div class="bar"><i style="width:${Math.min(100, pct)}%;background:${col}"></i></div>
+      <div class="row"><span>Vacancies</span><b>${vacancies(f)}</b></div>
+      <div class="row"><span>Distance from dispatch</span><b>${dist.toFixed(2)} km</b></div>
+      <div class="state" style="color:${col}">● ${statusLabel(pct)} · ${pct.toFixed(1)}%</div>
+    </div>`;
+  }
+
+  function markerRadius(f) { return 10 + Math.sqrt(f.max) * 1.6; }
+
+  function upsertMarkers() {
+    state.facilities.forEach((f) => {
+      const pct = occPct(f);
+      const col = statusColor(pct);
+      let m = markers[f.id];
+      if (!m) {
+        m = L.circleMarker([f.lat, f.lng], {
+          radius: markerRadius(f), color: col, fillColor: col, fillOpacity: 0.55, weight: 3
+        }).addTo(map);
+        m.bindPopup(popupHtml(f));
+        m.bindTooltip(f.name, { permanent: true, direction: "right", offset: [markerRadius(f) + 2, 0], className: "node-label" });
+        markers[f.id] = m;
+      } else {
+        m.setStyle({ color: col, fillColor: col });
+        m.setPopupContent(popupHtml(f));
       }
-      function haversineKm(a, b) {
-        const rad = value => value * Math.PI / 180;
-        const earthRadius = 6371;
-        const dLat = rad(b.lat - a.lat);
-        const dLon = rad(b.lng - a.lng);
-        const value = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
-        return earthRadius * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
-      }
-      function popupHtml(facility) {
-        const status = statusOf(facility);
-        const occupancy = occupancyOf(facility);
-        return `<div class="facility-popup">
-          <div class="popup-tag">${facility.tag} · ${status.label}</div>
-          <h4>${facility.name}</h4>
-          <div class="popup-data"><span>Occupancy</span><b>${facility.current} / ${facility.max} (${Math.round(occupancy)}%)</b></div>
-          <div class="popup-track"><div class="popup-fill" style="width:${Math.min(100, occupancy)}%;background:${status.color}"></div></div>
-        </div>`;
-      }
-      function markerStyle(facility) {
-        const status = statusOf(facility);
-        return {
-          radius: 8 + Math.min(5, facility.max / 30),
-          color: status.color,
-          weight: 2,
-          fillColor: status.color,
-          fillOpacity: .3
-        };
-      }
-      function initializeMarkers() {
-        state.facilities.forEach(facility => {
-          const marker = L.circleMarker([facility.lat, facility.lng], markerStyle(facility)).addTo(map);
-          marker.bindPopup(popupHtml(facility));
-          markerById.set(facility.id, marker);
-        });
-      }
-      function refreshMarkers() {
-        state.facilities.forEach(facility => {
-          const marker = markerById.get(facility.id);
-          marker.setStyle(markerStyle(facility));
-          marker.setPopupContent(popupHtml(facility));
-          const path = marker.getElement();
-          if (path) path.classList.toggle("critical-node", statusOf(facility).key === "critical");
-        });
-      }
-      initializeMarkers();
-      map.whenReady(refreshMarkers);
+      const el = m.getElement();
+      if (el) el.classList.toggle("node-crit", pct > 95);
+    });
+  }
 
-      const chartContext = document.querySelector("#capacityChart").getContext("2d");
-      function createChart() {
-        chart = new Chart(chartContext, {
-          type: "bar",
-          data: {
-            labels: state.facilities.map(item => item.name.replace(" Intake Hub", "").replace(" Safe-Haven", "").replace(" Point", "")),
-            datasets: [{
-              label: "Occupancy",
-              data: state.facilities.map(occupancyOf),
-              borderWidth: 1,
-              borderRadius: 7,
-              borderSkipped: false,
-              barThickness: 15,
-              backgroundColor: state.facilities.map(item => statusOf(item).color + "99"),
-              borderColor: state.facilities.map(item => statusOf(item).color)
-            }]
-          },
-          options: {
-            indexAxis: "y",
-            maintainAspectRatio: false,
-            responsive: true,
-            animation: { duration: 750, easing: "easeOutQuart" },
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                displayColors: false,
-                backgroundColor: "#07111d",
-                borderColor: "rgba(255,255,255,.12)",
-                borderWidth: 1,
-                padding: 10,
-                callbacks: { label: context => ` ${context.raw.toFixed(1)}% occupied` }
-              }
-            },
-            scales: {
-              x: {
-                min: 0, max: 100,
-                grid: { color: "rgba(255,255,255,.05)" },
-                border: { display: false },
-                ticks: { color: "#526176", font: { family: "Space Mono", size: 8 }, callback: value => value + "%" }
-              },
-              y: {
-                grid: { display: false },
-                border: { display: false },
-                ticks: { color: "#8fa0b5", font: { family: "DM Sans", size: 10, weight: 600 } }
-              }
+  function clearRoutes() {
+    routeLayer.clearLayers();
+    ngoLayer.clearLayers();
+  }
+
+  function drawRoutes(result) {
+    clearRoutes();
+    const points = [[DISPATCH.lat, DISPATCH.lng]];
+    result.ranked.filter((r) => r.units > 0).forEach((r, i) => {
+      const line = L.polyline([[DISPATCH.lat, DISPATCH.lng], [r.lat, r.lng]], {
+        color: COLORS.cyan, weight: i === 0 ? 4 : 3, opacity: i === 0 ? 1 : 0.75, dashArray: "10 8", className: "route-line"
+      }).addTo(routeLayer);
+      line.bindTooltip(`+${r.units} → ${r.name}`, { sticky: true, className: "node-label" });
+      points.push([r.lat, r.lng]);
+    });
+
+    if (result.overflow > 0) {
+      const per = distributeOverflow(result.overflow);
+      NGO_NODES.forEach((n, i) => {
+        if (!per[i]) return;
+        L.polyline([[DISPATCH.lat, DISPATCH.lng], [n.lat, n.lng]], {
+          color: COLORS.amber, weight: 2.5, opacity: 0.85, dashArray: "4 8", className: "route-line amber"
+        }).addTo(ngoLayer);
+        L.marker([n.lat, n.lng], {
+          icon: L.divIcon({ className: "", html: '<div class="ngo-icon"></div>', iconSize: [14, 14], iconAnchor: [7, 7] }),
+          title: n.name
+        })
+          .addTo(ngoLayer)
+          .bindPopup(`<div class="pop"><h4>${escapeHtml(n.name)}</h4><span class="tag" style="background:var(--amber-soft);color:#fcd34d">Emergency NGO node</span><div class="row"><span>Overflow placements</span><b>${per[i]}</b></div></div>`);
+        points.push([n.lat, n.lng]);
+      });
+    }
+
+    if (points.length > 1) map.flyToBounds(L.latLngBounds(points).pad(0.25), { duration: 1.1, maxZoom: 13 });
+  }
+
+  function distributeOverflow(total) {
+    const out = NGO_NODES.map(() => 0);
+    for (let i = 0; i < total; i++) out[i % NGO_NODES.length]++;
+    return out;
+  }
+
+  $("recenter").addEventListener("click", () => map.flyTo(MAP_CENTER, 12, { duration: 0.9 }));
+
+  // ---------------- Chart ----------------
+  Chart.defaults.color = "#8b98ad";
+  Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+  Chart.defaults.font.weight = 600;
+
+  const chart = new Chart($("capacityChart"), {
+    type: "bar",
+    data: {
+      labels: state.facilities.map((f) => f.name),
+      datasets: [
+        { label: "Occupied", data: [], backgroundColor: [], borderRadius: 10, borderSkipped: false, barThickness: 22 },
+        { label: "Vacant", data: [], backgroundColor: "rgba(148, 163, 184, 0.14)", borderRadius: 10, borderSkipped: false, barThickness: 22 }
+      ]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 900, easing: "easeOutQuart" },
+      scales: {
+        x: { stacked: true, grid: { color: "rgba(255,255,255,0.05)" }, border: { display: false }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 11 } } },
+        y: { stacked: true, grid: { display: false }, border: { display: false }, ticks: { color: "#e6edf7", font: { size: 12, weight: 700 } } }
+      },
+      plugins: {
+        legend: { position: "top", align: "end", labels: { usePointStyle: true, pointStyle: "rectRounded", boxWidth: 10, padding: 16 } },
+        tooltip: {
+          backgroundColor: "rgba(10,16,30,0.95)", borderColor: "rgba(255,255,255,0.12)", borderWidth: 1,
+          padding: 12, cornerRadius: 14, titleFont: { weight: 800 },
+          callbacks: {
+            afterBody: (items) => {
+              const f = state.facilities[items[0].dataIndex];
+              return `Load: ${occPct(f).toFixed(1)}%  ·  Tag: ${f.tag}`;
             }
           }
-        });
-      }
-      createChart();
-
-      function saveState() {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-        catch (error) { addLog("warning", "Local memory frame unavailable; session will not persist."); }
-      }
-      function nowTime() {
-        return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(new Date());
-      }
-      function addLog(type, message) {
-        const row = document.createElement("div");
-        row.className = `log-row ${type}`;
-        row.innerHTML = `<span class="log-time">[${nowTime()}]</span><span class="log-copy">${message}</span>`;
-        els.log.appendChild(row);
-        while (els.log.children.length > 24) els.log.firstElementChild.remove();
-        els.log.scrollTop = els.log.scrollHeight;
-      }
-      function clearRoutes() {
-        routeLines.forEach(line => map.removeLayer(line));
-        routeLines = [];
-      }
-      function drawRoutes(allocations) {
-        clearRoutes();
-        allocations.filter(item => item.amount > 0).forEach((allocation, index) => {
-          const line = L.polyline([[DISPATCH.lat, DISPATCH.lng], [allocation.facility.lat, allocation.facility.lng]], {
-            color: "#54e8ff",
-            weight: Math.max(1.5, 3 - index * .35),
-            opacity: Math.max(.42, .88 - index * .12),
-            dashArray: "6 9",
-            className: "route-vector"
-          }).addTo(map);
-          line.bindTooltip(`${allocation.amount} routed → ${allocation.facility.name}`, { sticky: true });
-          routeLines.push(line);
-        });
-      }
-      function updateDashboard() {
-        const totalCurrent = state.facilities.reduce((sum, item) => sum + item.current, 0);
-        const totalMax = state.facilities.reduce((sum, item) => sum + item.max, 0);
-        const occupancy = (totalCurrent / totalMax) * 100;
-        const vacancies = totalMax - totalCurrent;
-        els.occupancy.textContent = occupancy.toFixed(1);
-        els.vacancy.textContent = vacancies;
-        els.occupancyFoot.textContent = `${totalCurrent} of ${totalMax} district beds assigned`;
-
-        const criticalNodes = state.facilities.filter(item => statusOf(item).key === "critical").length;
-        els.state.textContent = criticalNodes ? "STRAINED" : "STABLE";
-        els.state.style.color = criticalNodes ? "var(--amber)" : "var(--emerald)";
-        els.stateFoot.textContent = criticalNodes ? `${criticalNodes} node${criticalNodes > 1 ? "s" : ""} above 95% load` : "Matrix ready for dispatch";
-        els.systemStat.style.setProperty("--glow", criticalNodes ? "var(--amber)" : "var(--emerald)");
-
-        chart.data.datasets[0].data = state.facilities.map(occupancyOf);
-        chart.data.datasets[0].backgroundColor = state.facilities.map(item => statusOf(item).color + "99");
-        chart.data.datasets[0].borderColor = state.facilities.map(item => statusOf(item).color);
-        chart.update();
-        refreshMarkers();
-      }
-      function renderAllocations(allocations, requested, overflow) {
-        els.allocationTotal.textContent = `${requested} MOVED`;
-        const primary = allocations.filter(item => item.amount > 0);
-        if (!primary.length && !overflow) {
-          els.allocations.innerHTML = `<div class="empty-allocation"><div><div class="empty-icon">↗</div>No primary placements generated.</div></div>`;
-          return;
-        }
-        els.allocations.innerHTML = primary.map((item, index) => `
-          <div class="allocation-item" style="animation-delay:${index * 70}ms">
-            <div><strong>${item.facility.name}</strong><span>Score ${item.score.toFixed(1)} · ${item.distance.toFixed(1)} km</span></div>
-            <div class="allocation-count">+${item.amount}</div>
-          </div>`).join("") + (overflow ? `
-          <div class="allocation-item" style="border-color:rgba(245,158,11,.22)">
-            <div><strong>Emergency Foster & NGO Network</strong><span>Community release valve</span></div>
-            <div class="allocation-count" style="color:var(--amber)">+${overflow}</div>
-          </div>` : "");
-      }
-      function runMatrix(requested, specialization) {
-        const ranked = state.facilities.map(facility => {
-          const vacancies = facility.max - facility.current;
-          const distance = haversineKm(DISPATCH, facility);
-          const match = facility.tag === specialization;
-          const score = vacancies <= 0 ? Number.NEGATIVE_INFINITY : (vacancies * .5) + (match ? 30 : 0) - (distance * .2);
-          return { facility, vacancies, distance, match, score, amount: 0 };
-        }).sort((a, b) => b.score - a.score);
-
-        let remaining = requested;
-        ranked.forEach(candidate => {
-          if (remaining <= 0 || candidate.vacancies <= 0) return;
-          candidate.amount = Math.min(remaining, candidate.vacancies);
-          candidate.facility.current += candidate.amount;
-          remaining -= candidate.amount;
-        });
-
-        state.overflow += remaining;
-        state.runCount += 1;
-        saveState();
-        drawRoutes(ranked);
-        renderAllocations(ranked, requested, remaining);
-        updateDashboard();
-
-        addLog("system", `Matrix #${String(state.runCount).padStart(3, "0")}: analyzed ${requested} ${specialization.toLowerCase()} placement${requested === 1 ? "" : "s"}.`);
-        ranked.filter(item => item.amount).forEach(item => addLog("success", `ROUTE: ${item.amount} → ${item.facility.name}; weight ${item.score.toFixed(2)}.`));
-        if (remaining > 0) {
-          addLog("warning", `WARNING: Primary infrastructure saturated. Engaging community release valve grid for ${remaining}.`);
-          els.override.classList.add("active");
-          els.overflow.textContent = remaining;
-        } else {
-          addLog("success", `BALANCED: All ${requested} placements allocated inside the primary network.`);
-          els.override.classList.remove("active");
-          els.overflow.textContent = "0";
         }
       }
+    }
+  });
 
-      els.form.addEventListener("submit", event => {
-        event.preventDefault();
-        const requested = Number.parseInt(els.intake.value, 10);
-        if (!Number.isInteger(requested) || requested < 1 || requested > 500) {
-          addLog("warning", "INPUT ERROR: Intake size must be an integer from 1 to 500.");
-          els.intake.focus();
-          return;
-        }
-        els.loader.classList.add("active");
-        els.loader.setAttribute("aria-hidden", "false");
-        els.execute.disabled = true;
-        addLog("system", "Initializing multi-variable priority sort...");
-        window.setTimeout(() => {
-          runMatrix(requested, els.specialization.value);
-          els.loader.classList.remove("active");
-          els.loader.setAttribute("aria-hidden", "true");
-          els.execute.disabled = false;
-        }, 1000);
+  function updateChart() {
+    chart.data.datasets[0].data = state.facilities.map((f) => f.current);
+    chart.data.datasets[0].backgroundColor = state.facilities.map((f) => statusColor(occPct(f)));
+    chart.data.datasets[1].data = state.facilities.map((f) => vacancies(f));
+    chart.update();
+  }
+
+  // ---------------- Metrics ----------------
+  function animateNumber(el, to, suffixHtml = "") {
+    const from = Number(el.dataset.v || 0);
+    el.dataset.v = to;
+    const start = performance.now();
+    const dur = 700;
+    const step = (now) => {
+      const p = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.innerHTML = Math.round(from + (to - from) * eased) + suffixHtml;
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  function updateMetrics() {
+    const cap = state.facilities.reduce((a, f) => a + f.max, 0);
+    const occ = state.facilities.reduce((a, f) => a + f.current, 0);
+    const vac = cap - occ;
+    const load = cap ? (occ / cap) * 100 : 0;
+
+    animateNumber($("tLoad"), Math.round(load), "<small>%</small>");
+    $("tLoadBar").style.width = Math.min(100, load) + "%";
+    animateNumber($("tOcc"), occ, `<small>/ ${cap}</small>`);
+    animateNumber($("tVac"), vac);
+    animateNumber($("tOverflow"), state.overflowTotal);
+    $("tVacNote").textContent = vac === 0 ? "network fully saturated" : `${state.facilities.filter((f) => vacancies(f) > 0).length} facilities accepting`;
+    $("tRuns").textContent = `${state.runs} simulation${state.runs === 1 ? "" : "s"} run`;
+
+    const anyFull = state.facilities.some((f) => occPct(f) > 95);
+    const pill = $("statusPill");
+    pill.classList.remove("balanced", "strained", "critical");
+    if (vac === 0 || load > 95) { pill.classList.add("critical"); $("statusText").textContent = "Critical saturation"; }
+    else if (anyFull || load >= 70) { pill.classList.add("strained"); $("statusText").textContent = "Strained"; }
+    else { pill.classList.add("balanced"); $("statusText").textContent = "Balanced"; }
+  }
+
+  function refreshAll() {
+    upsertMarkers();
+    updateChart();
+    updateMetrics();
+  }
+
+  // ---------------- Algorithm ----------------
+  /**
+   * Score = (Vacancies * 0.5) + (Specialization Match ? 30 : 0) - (Distance km * 0.2)
+   * Facilities at absolute max capacity are hard-penalized (-Infinity) and disqualified.
+   */
+  function computeAllocation(intake, spec) {
+    const scored = state.facilities.map((f) => {
+      const vac = vacancies(f);
+      const match = f.tag === spec;
+      const distance = haversineKm(DISPATCH, f);
+      const full = vac <= 0;
+      const score = full ? -Infinity : vac * 0.5 + (match ? 30 : 0) - distance * 0.2;
+      return { id: f.id, name: f.name, lat: f.lat, lng: f.lng, tag: f.tag, vac, match, distance, full, score, units: 0 };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+
+    let remaining = intake;
+    for (const node of scored) {
+      if (remaining <= 0) break;
+      if (node.full) continue;
+      const take = Math.min(remaining, node.vac);
+      node.units = take;
+      remaining -= take;
+    }
+
+    return { intake, spec, ranked: scored, overflow: remaining, at: timestamp() };
+  }
+
+  function applyAllocation(result) {
+    result.ranked.forEach((r) => {
+      const f = state.facilities.find((x) => x.id === r.id);
+      if (f && r.units > 0) f.current = Math.min(f.max, f.current + r.units);
+    });
+    state.overflowTotal += result.overflow;
+    state.runs += 1;
+    state.lastResult = result;
+  }
+
+  // ---------------- Results panel ----------------
+  function fmtScore(s) { return Number.isFinite(s) ? s.toFixed(2) : "DQ"; }
+
+  function renderResults(result) {
+    const wrap = $("results");
+    if (!result) {
+      wrap.innerHTML = `<div class="results-empty"><svg aria-hidden="true"><use href="#mascot" /></svg><div>No batch dispatched yet.<br />Set an intake size and run the matrix.</div></div>`;
+      $("planMeta").textContent = "Awaiting run";
+      return;
+    }
+    $("planMeta").textContent = `${result.intake} × ${result.spec} · ${result.at}`;
+
+    let topAssigned = false;
+    const rows = result.ranked.map((r, i) => {
+      let cls = "alloc";
+      if (r.full) cls += " dq";
+      else if (r.units === 0) cls += " skip";
+      else if (!topAssigned) { cls += " top"; topAssigned = true; }
+      const unitsHtml = r.full ? "FULL" : r.units > 0 ? `+${r.units}` : "—";
+      return `<div class="${cls}" style="animation-delay:${i * 70}ms">
+        <div class="rank">${i + 1}</div>
+        <div>
+          <div class="name">${escapeHtml(r.name)}${r.match ? ' <span style="color:var(--cyan);font-size:11px">● match</span>' : ""}</div>
+          <div class="meta">score ${fmtScore(r.score)} · vac ${r.vac} · ${r.distance.toFixed(1)}km</div>
+        </div>
+        <div class="units">${unitsHtml}</div>
+      </div>`;
+    }).join("");
+
+    const banner = result.overflow > 0
+      ? `<div class="valve" role="alert">
+          <div class="head"><span class="warn-ico">!</span>Critical override · Release valve engaged</div>
+          <div class="big">${result.overflow} individual${result.overflow === 1 ? "" : "s"} rerouted</div>
+          <p>Primary facilities reached 100% threshold. Overflow dispatched to the NY-11 Emergency Foster &amp; NGO Distributed Network.</p>
+        </div>`
+      : `<div class="ok-banner">✓ All ${result.intake} individuals placed within primary infrastructure.</div>`;
+
+    wrap.innerHTML = `<div class="alloc-list">${rows}</div>${banner}`;
+  }
+
+  // ---------------- Controls ----------------
+  const form = $("intakeForm");
+  const input = $("intakeSize");
+  const select = $("specialization");
+  const chips = document.querySelectorAll(".chip");
+  const runBtn = $("runBtn");
+  const overlay = $("overlay");
+
+  function setSpec(spec) {
+    select.value = spec;
+    chips.forEach((c) => {
+      const on = c.dataset.spec === spec;
+      c.classList.toggle("active", on);
+      c.setAttribute("aria-checked", on ? "true" : "false");
+    });
+  }
+  chips.forEach((c) => c.addEventListener("click", () => setSpec(c.dataset.spec)));
+
+  document.querySelectorAll("[data-step]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const v = parseInt(input.value, 10) || 0;
+      input.value = Math.min(500, Math.max(1, v + Number(b.dataset.step)));
+      validate();
+    })
+  );
+
+  function validate() {
+    const raw = input.value.trim();
+    const v = Number(raw);
+    let err = "";
+    if (raw === "" || !Number.isInteger(v)) err = "Enter a whole number of individuals.";
+    else if (v < 1) err = "Intake size must be at least 1.";
+    else if (v > 500) err = "Max batch size is 500 per dispatch.";
+    $("intakeError").textContent = err;
+    $("stepper").classList.toggle("invalid", !!err);
+    return err ? null : v;
+  }
+  input.addEventListener("input", validate);
+
+  const overlaySteps = ["Scoring facility vectors", "Applying specialization weights", "Resolving distance penalties", "Committing allocation frame"];
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const intake = validate();
+    if (intake === null) { input.focus(); return; }
+    const spec = select.value;
+
+    runBtn.disabled = true;
+    overlay.classList.add("show");
+    overlay.setAttribute("aria-hidden", "false");
+    let s = 0;
+    $("overlaySub").textContent = overlaySteps[0];
+    const ticker = setInterval(() => { s = Math.min(overlaySteps.length - 1, s + 1); $("overlaySub").textContent = overlaySteps[s]; }, 250);
+
+    log("info", `Intake request received: ${intake} individual(s), constraint = ${spec}.`);
+
+    setTimeout(() => {
+      clearInterval(ticker);
+      const result = computeAllocation(intake, spec);
+      applyAllocation(result);
+
+      const top = result.ranked.find((r) => r.units > 0);
+      const disq = result.ranked.filter((r) => r.full);
+      if (disq.length) log("warn", `Hard penalty applied — disqualified at max capacity: ${disq.map((d) => d.name).join(", ")}.`);
+      if (top) log("info", `Priority vector resolved. Top node: ${top.name} (score ${top.score.toFixed(2)}, ${top.distance.toFixed(2)} km).`);
+      result.ranked.filter((r) => r.units > 0).forEach((r) => {
+        const f = state.facilities.find((x) => x.id === r.id);
+        log("ok", `Routed +${r.units} → ${r.name} · load now ${f.current}/${f.max} (${occPct(f).toFixed(1)}%).`);
       });
+      if (result.overflow > 0) {
+        log("warn", "Primary infrastructure saturated. Engaging community release valve grid.");
+        log("crit", `Overflow of ${result.overflow} routed to NY-11 Emergency Foster & NGO Distributed Network.`);
+      } else {
+        log("ok", `Batch fully balanced within primary grid. Network vacancies remaining: ${state.facilities.reduce((a, f) => a + vacancies(f), 0)}.`);
+      }
 
-      els.reset.addEventListener("click", () => {
-        state = { facilities: structuredClone(DEFAULT_FACILITIES), overflow: 0, runCount: 0 };
-        saveState();
-        clearRoutes();
-        els.override.classList.remove("active");
-        els.overflow.textContent = "0";
-        els.allocationTotal.textContent = "0 MOVED";
-        els.allocations.innerHTML = `<div class="empty-allocation"><div><div class="empty-icon">↗</div>Awaiting intake matrix execution.<br>Route output will appear here.</div></div>`;
-        updateDashboard();
-        addLog("system", "Simulation memory restored to baseline telemetry frame.");
-      });
+      saveState();
+      refreshAll();
+      renderResults(result);
+      drawRoutes(result);
 
-      updateDashboard();
-      addLog("system", "GIS layer synchronized. Four NY-11 nodes reporting.");
-      addLog("success", "Capacity matrix online. Dispatch core standing by.");
-      window.addEventListener("resize", () => map.invalidateSize());
-    })();
-  </script>
+      overlay.classList.remove("show");
+      overlay.setAttribute("aria-hidden", "true");
+      runBtn.disabled = false;
+    }, 1000);
+  });
+
+  $("dischargeBtn").addEventListener("click", () => {
+    let released = 0;
+    state.facilities.forEach((f) => {
+      const n = Math.min(f.current, Math.round(f.max * (0.08 + Math.random() * 0.1)));
+      f.current -= n;
+      released += n;
+    });
+    log("info", `Discharge cycle complete: ${released} bed(s) released across ${state.facilities.length} facilities.`);
+    clearRoutes();
+    saveState();
+    refreshAll();
+  });
+
+  $("resetBtn").addEventListener("click", () => {
+    state = freshState();
+    clearRoutes();
+    renderAllLogs();
+    log("info", "Network reset to baseline occupancy. Local data frame reinitialized.");
+    saveState();
+    refreshAll();
+    renderResults(null);
+    map.flyTo(MAP_CENTER, 12, { duration: 0.9 });
+  });
+
+  $("clearLogs").addEventListener("click", () => {
+    state.logs = [];
+    renderAllLogs();
+    saveState();
+  });
+
+  // ---------------- Clock ----------------
+  const tickClock = () => { $("clock").textContent = timestamp(); };
+  tickClock();
+  setInterval(tickClock, 1000);
+
+  // ---------------- Boot ----------------
+  renderAllLogs();
+  refreshAll();
+  if (state.lastResult) {
+    renderResults(state.lastResult);
+    drawRoutes(state.lastResult);
+  }
+  if (!state.logs.length || state.runs === 0) {
+    log("info", "NetShelter matrix online. 4 facility nodes registered on Staten Island grid.");
+    const hot = state.facilities.filter((f) => occPct(f) > 95);
+    if (hot.length) log("warn", `Elevated load detected: ${hot.map((f) => f.name).join(", ")} above 95% occupancy.`);
+  } else {
+    log("info", `Session restored from local storage · ${state.runs} prior simulation(s).`);
+  }
+  saveState();
+
+  window.addEventListener("resize", () => map.invalidateSize());
+})();
+</script>
 </body>
 </html>
