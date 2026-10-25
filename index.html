@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#070b12" />
+  <meta name="theme-color" content="#f4f1e8" />
   <meta name="description" content="NetShelter is the NY-11 capacity load-balancing matrix. It places shelter intake across Staten Island and Bay Ridge using live occupancy, specialization, and distance from dispatch." />
   <title>NetShelter: Capacity Load-Balancing Matrix</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 L28 9 V23 L16 30 L4 23 V9 Z' fill='none' stroke='%2306b6d4' stroke-width='1.8'/%3E%3Ccircle cx='16' cy='16' r='3.2' fill='%2306b6d4'/%3E%3C/svg%3E" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%231b6655'/%3E%3Cpath d='M7 16 16 8l9 8v9h-5v-7l-4 3-4-3v7H7z' fill='%23fffaf0'/%3E%3Ccircle cx='16' cy='8' r='2.4' fill='%23ef785e'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
@@ -126,7 +126,7 @@
       letter-spacing: -0.04em;
       font-weight: 750;
     }
-    .brand h1 span {
+    .brand h1 .tagline {
       display: block;
       margin-top: 4px;
       font-family: Outfit, sans-serif;
@@ -656,6 +656,121 @@
     @keyframes scan { from { top: 0; } to { top: 100%; } }
     @keyframes fillbar { from { width: 0; } to { width: 100%; } }
 
+    /* Calm, public-service identity: warm paper, evergreen, sage, and coral. */
+    :root {
+      --bg: #f4f1e8;
+      --card: rgba(255, 253, 248, 0.9);
+      --line: rgba(27, 74, 65, 0.14);
+      --text: #173d36;
+      --muted: #5e756f;
+      --dim: #7c8d87;
+      --cyan: #1b6655;
+      --cyan-2: #267c69;
+      --emerald: #2f8068;
+      --crimson: #d95747;
+      --amber: #d28a32;
+      --amber-2: #af6b20;
+      --violet: #765f91;
+      --shadow: 0 16px 38px rgba(41, 66, 59, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    }
+    html { color-scheme: light; }
+    body {
+      background:
+        radial-gradient(900px 520px at 4% -5%, rgba(163, 195, 174, 0.42), transparent 58%),
+        radial-gradient(760px 440px at 100% 2%, rgba(239, 120, 94, 0.12), transparent 50%),
+        radial-gradient(760px 520px at 75% 110%, rgba(209, 218, 188, 0.42), transparent 48%),
+        var(--bg);
+    }
+    body::before {
+      background-image:
+        linear-gradient(rgba(27, 102, 85, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(27, 102, 85, 0.035) 1px, transparent 1px);
+    }
+    .mark {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: #1b6655;
+      border-color: #1b6655;
+      box-shadow: 0 8px 18px rgba(27, 102, 85, 0.2);
+    }
+    .brand h1 { color: #173d36; letter-spacing: -0.045em; }
+    .brand-word { color: #ef785e; }
+    .chip, .pill, .clock { background: rgba(255, 253, 248, 0.72); }
+    .pill.ok { background: #e4f1e8; border-color: #bdd8c8; }
+    .pill.warn { background: #fff1d9; border-color: #ebc989; }
+    .pill.crit { color: #b94035; background: #fde7e2; border-color: #efb7ad; }
+    .clock { color: #1b6655; }
+    .formula, #log, .field input, .field select, .kpi {
+      background-color: rgba(244, 241, 232, 0.74);
+    }
+    .formula { border-color: rgba(27, 102, 85, 0.2); }
+    .field label { color: #395b53; }
+    .field input, .field select { border-color: rgba(27, 74, 65, 0.17); }
+    .field input:hover, .field select:hover { border-color: rgba(27, 74, 65, 0.32); }
+    .field input:focus, .field select:focus {
+      border-color: rgba(27, 102, 85, 0.76);
+      box-shadow: 0 0 0 3px rgba(27, 102, 85, 0.13);
+    }
+    .execute {
+      color: #fffdf8;
+      background: linear-gradient(180deg, #277b68 0%, #1b6655 100%);
+      box-shadow: 0 10px 24px rgba(27, 102, 85, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    }
+    .execute:hover:not(:disabled) {
+      box-shadow: 0 0 0 1px rgba(27, 102, 85, 0.28), 0 14px 28px rgba(27, 102, 85, 0.25);
+    }
+    .presets button, .text-btn, .ghost { color: #395b53; background: rgba(255, 253, 248, 0.7); }
+    .presets button:hover, .text-btn:hover, .ghost:hover {
+      border-color: rgba(27, 102, 85, 0.45);
+      background: #e8f0e8;
+      color: #173d36;
+    }
+    .node { border-color: rgba(27, 74, 65, 0.1); background: rgba(255, 255, 255, 0.42); }
+    .node:hover { border-color: rgba(27, 102, 85, 0.4); }
+    .node.flash { box-shadow: 0 0 0 1px rgba(27, 102, 85, 0.46), 0 8px 20px rgba(27, 102, 85, 0.13); }
+    .meter, .pop-meter, .loadbar { background: rgba(27, 74, 65, 0.1); }
+    .tag[data-tag="General"] { color: #1b6655; background: #e2efe9; }
+    .tag[data-tag="Juvenile"] { color: #765f91; background: #eee8f3; }
+    .tag[data-tag="Medical Rehab"] { color: #386d55; background: #e4eee1; }
+    .valve.hot { background: #fff0d8; border-color: #dda855; }
+    .valve.hot .valve-copy { color: #724a1d; }
+    #log { border-color: rgba(27, 74, 65, 0.09); }
+    .log-line span, .legend li { color: #36574f; }
+    .lv-score b { color: #687d77; }
+    .lv-critical b, .form-error { color: #c74b3e; }
+    #map, .leaflet-container { background: #dce5df; }
+    .leaflet-tile-pane { filter: saturate(0.68) sepia(0.08) brightness(1.02); }
+    .leaflet-bar a {
+      background: rgba(255, 253, 248, 0.94);
+      color: #173d36;
+    }
+    .leaflet-bar a:hover { background: #dfece5; color: #173d36; }
+    .leaflet-control-attribution { background: rgba(255, 253, 248, 0.86) !important; color: #60756f !important; }
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+      background: rgba(255, 253, 248, 0.97);
+      color: #173d36;
+      box-shadow: 0 16px 40px rgba(38, 64, 57, 0.2);
+    }
+    .leaflet-tooltip.node-tip {
+      background: rgba(255, 253, 248, 0.95);
+      color: #173d36;
+      border-color: rgba(27, 74, 65, 0.18);
+      box-shadow: 0 8px 20px rgba(38, 64, 57, 0.16);
+    }
+    .pop p { color: #58716a; }
+    .assign-card, .legend {
+      background: rgba(255, 253, 248, 0.86);
+      box-shadow: 0 12px 28px rgba(38, 64, 57, 0.14);
+    }
+    .map-alert { background: rgba(173, 90, 36, 0.92); }
+    th { background: rgba(246, 243, 234, 0.97); }
+    th, td { border-bottom-color: rgba(27, 74, 65, 0.09); }
+    tr.got td.name { color: #173d36; }
+    .overlay { background: rgba(28, 54, 48, 0.58); }
+    .overlay-card h2 { color: #173d36; text-shadow: none; }
+    .overlay-card { background: rgba(255, 253, 248, 0.97); }
+
     @media (max-height: 840px) {
       .formula { display: none; }
       .field input, .field select, .execute { height: 34px; }
@@ -682,7 +797,7 @@
       .log-panel { flex: none; min-height: 280px; height: 320px; }
       .chart-wrap { height: 230px; }
       .trace-scroll { max-height: 240px; }
-      .brand h1 span { display: none; }
+      .brand h1 .tagline { display: none; }
     }
     @media (max-width: 720px) {
       .kpi-row, .node-block { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -706,13 +821,13 @@
     <header class="topbar glass">
       <div class="brand">
         <div class="mark" aria-hidden="true">
-          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
-            <path d="M16 2.5L27.5 9.2V22.8L16 29.5L4.5 22.8V9.2L16 2.5Z" stroke="#06b6d4" stroke-width="1.6"/>
-            <circle cx="16" cy="16" r="6.5" stroke="#06b6d4" stroke-opacity="0.55"/>
-            <circle cx="16" cy="16" r="3" fill="#06b6d4"/>
+          <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
+            <path d="M5.5 15.8 16 6.8l10.5 9v10h-6v-8.1L16 21l-4.5-3.3v8.1h-6v-10Z" fill="#fffaf0"/>
+            <path d="m11.5 17.7 4.5 3.4 4.5-3.4" stroke="#ef785e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="16" cy="6.8" r="2.5" fill="#ef785e"/>
           </svg>
         </div>
-        <h1>NetShelter<span>Capacity Load-Balancing Matrix</span></h1>
+        <h1>Net<span class="brand-word">Shelter</span><span class="tagline">Capacity Load-Balancing Matrix</span></h1>
       </div>
       <div class="top-meta">
         <div class="chip">Congressional App Challenge · NY-11</div>
@@ -840,7 +955,7 @@
     (function () {
       const STORAGE_KEY = 'netshelter.ny11.v1';
       const SPECS = ['General', 'Medical Rehab', 'Juvenile'];
-      const STATUS_COLOR = { ok: '#10b981', warn: '#f59e0b', crit: '#ef4444' };
+      const STATUS_COLOR = { ok: '#2f8068', warn: '#d28a32', crit: '#d95747' };
       const DISPATCH = { lat: 40.5895, lng: -74.1154, name: 'NY-11 Entry Dispatch' };
       const MAP_CENTER = [40.5795, -74.1154];
       const BASELINE = [
@@ -1097,7 +1212,7 @@
         node.core = L.circleMarker([node.lat, node.lng], {
           radius: 8,
           weight: 2,
-          color: '#e7eef8',
+          color: '#fffdf8',
           fillColor: STATUS_COLOR.ok,
           fillOpacity: 1
         }).addTo(map);
@@ -1140,7 +1255,7 @@
         });
         const path = node.circle.getElement && node.circle.getElement();
         if (path) path.classList.toggle('is-crit', status === 'crit');
-        node.core.setStyle({ fillColor: color, color: status === 'crit' ? '#fff' : '#e7eef8' });
+        node.core.setStyle({ fillColor: color, color: '#fffdf8' });
         const open = Math.max(0, node.max - node.current);
         const pct = ((node.current / node.max) * 100).toFixed(1).replace(/\.0$/, '');
         node.circle.setTooltipContent(node.short + ' · ' + node.current + '/' + node.max + ' · ' + pct + '%');
@@ -1155,13 +1270,13 @@
           if (!node) return;
           const latlngs = [[DISPATCH.lat, DISPATCH.lng], [node.lat, node.lng]];
           routeLayer.addLayer(L.polyline(latlngs, {
-            color: '#06b6d4',
+            color: '#1b6655',
             weight: 8,
             opacity: 0.18,
             interactive: false
           }));
           const line = L.polyline(latlngs, {
-            color: '#67e8f9',
+            color: '#277b68',
             weight: 2.5,
             opacity: 0.95,
             dashArray: '7 11',
@@ -1538,9 +1653,8 @@
           maxZoom: 16
         }).setView(MAP_CENTER, 11);
         L.control.zoom({ position: 'topright' }).addTo(map);
-        // CARTO Dark Matter now returns an API-key watermark instead of geography.
-        // Esri World Dark Gray Canvas is the keyless dark municipal basemap.
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        // Esri World Light Gray Canvas keeps the civic map legible without an API key.
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
           attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
           maxZoom: 16,
           maxNativeZoom: 16
@@ -1549,7 +1663,7 @@
         const labelPane = map.getPane('labels');
         labelPane.style.zIndex = 250;
         labelPane.style.pointerEvents = 'none';
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
           pane: 'labels',
           maxZoom: 16,
           maxNativeZoom: 16,
@@ -1606,8 +1720,8 @@
             plugins: {
               legend: { display: false },
               tooltip: {
-                backgroundColor: 'rgba(15, 23, 42, 0.96)',
-                borderColor: 'rgba(255,255,255,0.08)',
+                backgroundColor: 'rgba(23, 61, 54, 0.96)',
+                borderColor: 'rgba(255,255,255,0.16)',
                 borderWidth: 1,
                 titleFont: { family: 'Outfit' },
                 bodyFont: { family: '"IBM Plex Mono", monospace' },
@@ -1627,16 +1741,16 @@
                 min: 0,
                 max: 100,
                 ticks: {
-                  color: '#8ea0b8',
+                  color: '#667b75',
                   stepSize: 25,
                   font: { family: '"IBM Plex Mono", monospace', size: 10 },
                   callback: (value) => value + '%'
                 },
-                grid: { color: 'rgba(255,255,255,0.06)' },
+                grid: { color: 'rgba(27,74,65,0.09)' },
                 border: { display: false }
               },
               y: {
-                ticks: { color: '#e7eef8', font: { family: 'Outfit, sans-serif', size: 12 } },
+                ticks: { color: '#36574f', font: { family: 'Outfit, sans-serif', size: 12 } },
                 grid: { display: false },
                 border: { display: false }
               }
@@ -1653,12 +1767,12 @@
               ctx.save();
               ctx.beginPath();
               ctx.setLineDash([4, 4]);
-              ctx.strokeStyle = 'rgba(239, 68, 68, 0.75)';
+              ctx.strokeStyle = 'rgba(217, 87, 71, 0.78)';
               ctx.lineWidth = 1;
               ctx.moveTo(x, yScale.top);
               ctx.lineTo(x, yScale.bottom);
               ctx.stroke();
-              ctx.fillStyle = 'rgba(252, 165, 165, 0.95)';
+              ctx.fillStyle = 'rgba(185, 64, 52, 0.95)';
               ctx.font = '10px "IBM Plex Mono", monospace';
               ctx.fillText('95%', x + 4, yScale.top + 10);
               ctx.restore();

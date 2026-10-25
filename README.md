@@ -6,7 +6,7 @@ Everything runs in the browser. Occupancy, the score trace, and the telemetry lo
 
 The entire interface, stylesheet, and allocation algorithm live in [`index.html`](index.html). Leaflet and Chart.js load from public CDNs.
 
-The map is Esri World Dark Gray Canvas. CARTO Dark Matter, the usual dark-matter skin, currently returns a watermark tile unless you attach an API key, so a judge would see no streets. Esri’s canvas is the dark municipal basemap that still draws Staten Island without a key.
+The map is Esri World Light Gray Canvas, which keeps the warm civic-service interface legible and draws Staten Island without requiring an API key.
 
 ## Run it
 
