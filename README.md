@@ -6,7 +6,7 @@ Everything runs in the browser. Occupancy, the score trace, and the telemetry lo
 
 The entire interface, stylesheet, and allocation algorithm live in [`index.html`](index.html). Leaflet and Chart.js load from public CDNs.
 
-The map is Esri World Dark Gray Canvas. CARTO Dark Matter, the usual dark-matter skin, currently returns a watermark tile unless you attach an API key, so a judge would see no streets. Esri’s canvas is the dark municipal basemap that still draws Staten Island without a key.
+The map is Esri World Light Gray Canvas. CARTO’s dark basemap currently returns a watermark tile unless you attach an API key, so a judge would see no streets. Esri’s light canvas still draws Staten Island without a key, and it sits in the same daylight palette as the rest of the dashboard.
 
 ## Run it
 
@@ -29,7 +29,7 @@ score = (vacancies × 0.5) + (specialization match ? 30 : 0) − (distance km ×
 
 Distance is the haversine length from dispatch to the facility. A node already at maximum capacity receives a hard penalty and is skipped. The matrix then fills nodes in score order. Anyone still unplaced is routed to the NY-11 Emergency Foster & NGO Distributed Network and the release valve switches to its critical override state.
 
-Map markers follow occupancy: emerald under 70%, amber from 70% through 95%, and a pulsing crimson ring above 95%. A cyan dashed vector is drawn from dispatch to every node that receives people.
+Map markers follow occupancy: green under 70%, amber from 70% through 95%, and a pulsing coral ring above 95%. A pine dashed vector is drawn from dispatch to every node that receives people.
 
 ## Judge shortcuts
 

@@ -3,48 +3,51 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#070b12" />
+  <meta name="theme-color" content="#e7efe6" />
   <meta name="description" content="NetShelter is the NY-11 capacity load-balancing matrix. It places shelter intake across Staten Island and Bay Ridge using live occupancy, specialization, and distance from dispatch." />
   <title>NetShelter: Capacity Load-Balancing Matrix</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 L28 9 V23 L16 30 L4 23 V9 Z' fill='none' stroke='%2306b6d4' stroke-width='1.8'/%3E%3Ccircle cx='16' cy='16' r='3.2' fill='%2306b6d4'/%3E%3C/svg%3E" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23F4F1E8'/%3E%3Cpath fill='%23245C43' d='M16.8 18.4H28.2V28.4c0 .7-.6 1.2-1.3 1.2H16.8V18.4z'/%3E%3Cpath fill='%23245C43' d='M16.6 18.8 23.2 11.6 29.6 18.8h-1.6l-4.8-4.9-4.8 4.9H16.6z'/%3E%3Cpath fill='%231B4332' d='M6 15.6h11.2V28.4c0 .7-.6 1.2-1.3 1.2H7.3c-.7 0-1.3-.5-1.3-1.2V15.6z'/%3E%3Cpath fill='%231B4332' d='M4.2 16.2 11.6 5.1 18.4 16.2h-1.7L11.6 8 5.9 16.2H4.2z'/%3E%3Crect x='7.3' y='17.8' width='3.1' height='2.6' rx='.45' fill='%23F4F1E8'/%3E%3Crect x='11.6' y='17.8' width='3.1' height='2.6' rx='.45' fill='%23F4F1E8'/%3E%3Crect x='21.3' y='21' width='3.1' height='2.5' rx='.45' fill='%23F4F1E8'/%3E%3Cpath fill='%23E36A45' d='M9.2 23.1h4.2c.4 0 .7.3.7.7V29.4H8.5V23.8c0-.4.3-.7.7-.7z'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,680;9..144,760&family=IBM+Plex+Mono:wght@400;500&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
   <style>
     :root {
-      --bg: #070b12;
-      --card: rgba(15, 23, 42, 0.65);
-      --line: rgba(255, 255, 255, 0.08);
-      --text: #e7eef8;
-      --muted: #93a4bd;
-      --dim: #6f849f;
-      --cyan: #06b6d4;
-      --cyan-2: #67e8f9;
-      --emerald: #10b981;
-      --crimson: #ef4444;
-      --amber: #f59e0b;
-      --amber-2: #fbbf24;
-      --violet: #c4b5fd;
-      --shadow: 0 18px 40px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-      --radius: 18px;
+      --bg: #e7efe6;
+      --card: rgba(255, 252, 246, 0.9);
+      --line: rgba(27, 58, 42, 0.12);
+      --text: #1c2b24;
+      --muted: #516158;
+      --dim: #4e5f56;
+      --pine: #1b4332;
+      --cyan: #1b4332;
+      --cyan-2: #1f6b45;
+      --emerald: #1f8a4d;
+      --crimson: #d6453d;
+      --amber: #e09a2b;
+      --amber-2: #8a5a10;
+      --violet: #5b4b86;
+      --coral: #e36a45;
+      --cream: #fffdf8;
+      --shadow: 0 16px 36px rgba(48, 72, 56, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      --radius: 22px;
     }
 
     * { box-sizing: border-box; }
-    html { color-scheme: dark; }
+    html { color-scheme: light; }
     html, body { height: 100%; }
     body {
       margin: 0;
       min-height: 100dvh;
       color: var(--text);
-      font-family: Outfit, "Segoe UI", sans-serif;
+      font-family: Nunito, "Segoe UI", sans-serif;
       font-size: 14px;
       background:
-        radial-gradient(980px 520px at 8% -10%, rgba(6, 182, 212, 0.16), transparent 55%),
-        radial-gradient(820px 460px at 100% 0%, rgba(239, 68, 68, 0.09), transparent 48%),
-        radial-gradient(720px 480px at 78% 110%, rgba(16, 185, 129, 0.07), transparent 46%),
+        radial-gradient(1100px 560px at -6% -12%, #e5f0d8 0%, transparent 58%),
+        radial-gradient(860px 520px at 108% -6%, #f6e3cf 0%, transparent 52%),
+        radial-gradient(760px 480px at 84% 112%, #d5e6e2 0%, transparent 50%),
         var(--bg);
     }
     body::before {
@@ -53,15 +56,13 @@
       inset: 0;
       pointer-events: none;
       z-index: 0;
-      background-image:
-        linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
-      background-size: 52px 52px;
-      mask-image: radial-gradient(circle at 50% 35%, #000 0%, transparent 78%);
+      background-image: radial-gradient(rgba(27, 67, 50, 0.045) 1px, transparent 1px);
+      background-size: 22px 22px;
+      mask-image: radial-gradient(circle at 50% 30%, #000 0%, transparent 82%);
     }
     button, input, select { font: inherit; color: inherit; }
     button { cursor: pointer; }
-    h1, h2, h3 { font-family: Syne, Outfit, sans-serif; }
+    h1, h2, h3 { font-family: Fraunces, Georgia, serif; font-optical-sizing: auto; }
     p { margin: 0; }
 
     .skip {
@@ -69,8 +70,8 @@
       left: 12px;
       top: -40px;
       z-index: 6000;
-      background: var(--cyan);
-      color: #04131a;
+      background: var(--pine);
+      color: #f6f3ec;
       padding: 8px 12px;
       border-radius: 8px;
       font-weight: 650;
@@ -109,15 +110,15 @@
     }
     .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .mark {
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       flex: 0 0 auto;
       display: grid;
       place-items: center;
-      border-radius: 12px;
-      background: rgba(6, 182, 212, 0.1);
-      border: 1px solid rgba(6, 182, 212, 0.28);
-      box-shadow: inset 0 0 16px rgba(6, 182, 212, 0.12);
+      border-radius: 14px;
+      background: var(--cream);
+      border: 1px solid rgba(27, 67, 50, 0.1);
+      box-shadow: 0 8px 18px rgba(27, 67, 50, 0.08);
     }
     .brand h1 {
       margin: 0;
@@ -129,7 +130,7 @@
     .brand h1 span {
       display: block;
       margin-top: 4px;
-      font-family: Outfit, sans-serif;
+      font-family: Nunito, sans-serif;
       font-size: 12.5px;
       font-weight: 500;
       letter-spacing: 0;
@@ -142,13 +143,19 @@
       gap: 8px;
       border-radius: 999px;
       border: 1px solid var(--line);
-      background: rgba(2, 6, 14, 0.35);
+      background: rgba(255, 252, 246, 0.78);
       padding: 6px 10px;
       font-family: "IBM Plex Mono", ui-monospace, monospace;
       font-size: 11px;
       letter-spacing: 0.06em;
       color: var(--muted);
       white-space: nowrap;
+    }
+    .chip {
+      background: #f6edd4;
+      color: #3f4a34;
+      border-color: rgba(138, 90, 16, 0.16);
+      letter-spacing: 0.04em;
     }
     .pill { letter-spacing: 0.12em; font-weight: 500; }
     .pill i {
@@ -158,9 +165,9 @@
       background: currentColor;
       box-shadow: 0 0 8px currentColor;
     }
-    .pill.ok { color: var(--emerald); background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.28); }
-    .pill.warn { color: var(--amber-2); background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3); }
-    .pill.crit { color: #fecaca; background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.4); }
+    .pill.ok { color: #176b3c; background: rgba(31, 138, 77, 0.12); border-color: rgba(31, 138, 77, 0.28); }
+    .pill.warn { color: var(--amber-2); background: rgba(224, 154, 43, 0.16); border-color: rgba(224, 154, 43, 0.38); }
+    .pill.crit { color: #9f2d24; background: rgba(214, 69, 61, 0.12); border-color: rgba(214, 69, 61, 0.34); }
     .pill.crit i { animation: blink 1.15s ease-in-out infinite; }
     .clock { color: var(--cyan-2); }
 
@@ -192,8 +199,8 @@
       margin: 8px 0 0;
       padding: 6px 8px;
       border-radius: 10px;
-      background: rgba(2, 6, 14, 0.5);
-      border: 1px solid rgba(6, 182, 212, 0.18);
+      background: #f3f6ef;
+      border: 1px solid rgba(27, 67, 50, 0.12);
       color: var(--cyan-2);
       font-family: "IBM Plex Mono", ui-monospace, monospace;
       font-size: 10.5px;
@@ -202,13 +209,13 @@
     }
     .fine { margin-top: 4px; color: var(--dim); font-size: 11px; line-height: 1.35; }
     .fields { display: grid; gap: 8px; margin-top: 8px; }
-    .field label { display: block; margin-bottom: 4px; color: #c5d3e4; font-size: 12px; }
+    .field label { display: block; margin-bottom: 4px; color: #31443a; font-size: 12px; font-weight: 650; }
     .field input, .field select {
       width: 100%;
       height: 36px;
       border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(2, 6, 14, 0.55);
+      border: 1px solid rgba(27, 67, 50, 0.14);
+      background: var(--cream);
       padding: 0 12px;
       outline: none;
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -223,30 +230,30 @@
       background-repeat: no-repeat;
       padding-right: 32px;
     }
-    .field input:hover, .field select:hover { border-color: rgba(255, 255, 255, 0.2); }
+    .field input:hover, .field select:hover { border-color: rgba(27, 67, 50, 0.28); }
     .field input:focus, .field select:focus {
-      border-color: rgba(6, 182, 212, 0.75);
-      box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.16);
+      border-color: rgba(27, 67, 50, 0.72);
+      box-shadow: 0 0 0 3px rgba(27, 67, 50, 0.12);
     }
-    .form-error { min-height: 1.1em; margin: 8px 0 0; color: #fecaca; font-size: 12px; }
+    .form-error { min-height: 1.1em; margin: 8px 0 0; color: #9f2d24; font-size: 12px; }
     .execute {
       width: 100%;
       height: 42px;
       margin-top: 2px;
       border: 0;
       border-radius: 12px;
-      font-family: Syne, Outfit, sans-serif;
-      font-weight: 750;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #04131a;
-      background: linear-gradient(180deg, #67e8f9 0%, #06b6d4 52%, #0891b2 100%);
-      box-shadow: 0 10px 26px rgba(6, 182, 212, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+      font-family: Nunito, sans-serif;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: #f6f3ec;
+      background: var(--pine);
+      box-shadow: 0 10px 24px rgba(27, 67, 50, 0.22);
       transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
     }
     .execute:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 0 0 1px rgba(103, 232, 249, 0.45), 0 14px 32px rgba(6, 182, 212, 0.34);
+      background: #245c43;
+      box-shadow: 0 14px 28px rgba(27, 67, 50, 0.28);
     }
     .execute:active:not(:disabled) { transform: translateY(0); }
     .execute:disabled { cursor: progress; filter: saturate(0.7); }
@@ -255,15 +262,15 @@
     .presets button, .text-btn, .ghost {
       border-radius: 999px;
       border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.03);
-      color: #d7e3f2;
+      background: rgba(255, 252, 246, 0.72);
+      color: var(--text);
       transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, color 0.18s ease;
     }
     .presets button { padding: 7px 10px; font-size: 12px; }
     .presets button:hover, .text-btn:hover, .ghost:hover {
-      border-color: rgba(6, 182, 212, 0.55);
-      background: rgba(6, 182, 212, 0.08);
-      color: white;
+      border-color: rgba(27, 67, 50, 0.32);
+      background: #e7f2e4;
+      color: var(--pine);
     }
     .row-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
     .ghost, .text-btn { padding: 6px 10px; font-size: 12px; background: transparent; }
@@ -279,12 +286,12 @@
       align-items: center;
       padding: 5px 8px;
       border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(27, 67, 50, 0.08);
+      background: rgba(255, 252, 246, 0.76);
       transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
     }
-    .node:hover { border-color: rgba(6, 182, 212, 0.45); transform: translateY(-1px); }
-    .node.flash { box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.55), 0 0 22px rgba(6, 182, 212, 0.18); }
+    .node:hover { border-color: rgba(27, 67, 50, 0.32); transform: translateY(-1px); }
+    .node.flash { box-shadow: 0 0 0 1px rgba(27, 67, 50, 0.4), 0 8px 20px rgba(27, 67, 50, 0.1); }
     .node-top { display: contents; }
     .node-sub { display: none; }
     .node-name {
@@ -307,22 +314,22 @@
       padding: 3px 6px;
       border-radius: 999px;
     }
-    .tag[data-tag="General"] { color: var(--cyan-2); background: rgba(6, 182, 212, 0.12); }
-    .tag[data-tag="Juvenile"] { color: var(--violet); background: rgba(167, 139, 250, 0.14); }
-    .tag[data-tag="Medical Rehab"] { color: #6ee7b7; background: rgba(16, 185, 129, 0.12); }
-    .meter { grid-column: 1 / -1; display: block; height: 3px; border-radius: 99px; background: rgba(255, 255, 255, 0.07); overflow: hidden; }
+    .tag[data-tag="General"] { color: var(--pine); background: rgba(27, 67, 50, 0.1); }
+    .tag[data-tag="Juvenile"] { color: var(--violet); background: rgba(91, 75, 134, 0.12); }
+    .tag[data-tag="Medical Rehab"] { color: #176b45; background: rgba(31, 138, 77, 0.14); }
+    .meter { grid-column: 1 / -1; display: block; height: 3px; border-radius: 99px; background: rgba(27, 67, 50, 0.08); overflow: hidden; }
     .meter-fill { display: block; height: 100%; width: 0; border-radius: inherit; transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1), background 0.4s ease; }
 
     .valve { transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease; }
     .valve-copy { margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.35; }
     .valve-stat { margin-top: 4px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; color: var(--cyan-2); }
     .valve.hot {
-      background: rgba(245, 158, 11, 0.12);
-      border-color: rgba(245, 158, 11, 0.62);
-      box-shadow: 0 0 28px rgba(245, 158, 11, 0.16), inset 0 1px 0 rgba(255, 214, 140, 0.25);
+      background: #fff6e8;
+      border-color: rgba(224, 154, 43, 0.72);
+      box-shadow: 0 12px 28px rgba(224, 154, 43, 0.12);
     }
     .valve.hot .kicker, .valve.hot h2, .valve.hot .valve-stat { color: var(--amber-2); }
-    .valve.hot .valve-copy { color: #fde7c2; }
+    .valve.hot .valve-copy { color: #5c4316; }
 
     .log-panel {
       flex: 1 1 auto;
@@ -340,8 +347,8 @@
       overflow: auto;
       padding: 8px;
       border-radius: 12px;
-      background: rgba(2, 6, 14, 0.62);
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      background: #f6f3ec;
+      border: 1px solid rgba(27, 67, 50, 0.08);
       font-family: "IBM Plex Mono", ui-monospace, monospace;
       font-size: 11.5px;
       line-height: 1.45;
@@ -357,12 +364,12 @@
     .log-line time, .log-line b { white-space: nowrap; }
     .log-line time { color: var(--dim); }
     .log-line b { font-weight: 500; }
-    .log-line span { color: #d5e2f0; }
+    .log-line span { color: #24352c; }
     .lv-sys b, .lv-run b { color: var(--cyan-2); }
-    .lv-score b { color: #a5b4c8; }
+    .lv-score b { color: #5e6f66; }
     .lv-alloc b, .lv-ok b { color: var(--emerald); }
     .lv-warning b { color: var(--amber-2); }
-    .lv-critical b { color: #fca5a5; }
+    .lv-critical b { color: #c2412d; }
 
     .stage {
       grid-column: 2;
@@ -376,43 +383,43 @@
       box-shadow: var(--shadow);
       animation: rise 0.65s ease 0.08s both;
     }
-    #map { position: absolute; inset: 0; background: #070b12; }
-    .leaflet-container { font-family: Outfit, sans-serif; background: #070b12; }
-    .leaflet-tile-pane { filter: brightness(0.82) contrast(1.18); }
+    #map { position: absolute; inset: 0; background: #e4ebe3; }
+    .leaflet-container { font-family: Nunito, sans-serif; background: #e4ebe3; }
+    .leaflet-tile-pane { filter: saturate(0.55) contrast(1.03); }
     .leaflet-bar { border: 0 !important; box-shadow: none !important; }
     .leaflet-bar a {
-      background: rgba(15, 23, 42, 0.88);
+      background: rgba(255, 252, 246, 0.94);
       color: var(--text);
       border: 1px solid var(--line) !important;
       width: 32px;
       height: 32px;
       line-height: 32px;
     }
-    .leaflet-bar a:hover { background: rgba(6, 182, 212, 0.22); color: white; }
+    .leaflet-bar a:hover { background: #e7f2e4; color: var(--pine); }
     .leaflet-control-attribution {
-      background: rgba(7, 11, 18, 0.78) !important;
-      color: #8ea0b8 !important;
+      background: rgba(255, 252, 246, 0.88) !important;
+      color: #5e6f66 !important;
       font-size: 10px !important;
       border-radius: 8px 0 0 0;
     }
     .leaflet-control-attribution a { color: var(--cyan-2) !important; }
     .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-      background: rgba(15, 23, 42, 0.94);
+      background: rgba(255, 252, 246, 0.98);
       color: var(--text);
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+      box-shadow: 0 16px 40px rgba(48, 72, 56, 0.16);
     }
     .leaflet-popup-content-wrapper {
       border: 1px solid var(--line);
       border-radius: 14px;
     }
     .leaflet-popup-content { margin: 12px 14px; }
-    .leaflet-container a.leaflet-popup-close-button { color: #cbd5e1; }
+    .leaflet-container a.leaflet-popup-close-button { color: #516158; }
     .leaflet-tooltip.node-tip {
-      background: rgba(7, 11, 18, 0.9);
+      background: rgba(255, 252, 246, 0.96);
       color: var(--text);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(27, 67, 50, 0.12);
       border-radius: 999px;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+      box-shadow: 0 8px 20px rgba(48, 72, 56, 0.12);
       font-family: "IBM Plex Mono", ui-monospace, monospace;
       font-size: 11px;
       padding: 4px 8px;
@@ -421,10 +428,10 @@
     .pop strong {
       display: block;
       margin: 2px 0 8px;
-      font-family: Syne, Outfit, sans-serif;
+      font-family: Fraunces, Georgia, serif;
       font-size: 15px;
     }
-    .pop p { margin-top: 4px; font-size: 12px; color: #b7c5d8; }
+    .pop p { margin-top: 4px; font-size: 12px; color: var(--muted); }
     .pop-tag {
       font-family: "IBM Plex Mono", ui-monospace, monospace;
       font-size: 10px;
@@ -432,7 +439,7 @@
       text-transform: uppercase;
       color: var(--cyan);
     }
-    .pop-meter { height: 6px; border-radius: 99px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+    .pop-meter { height: 6px; border-radius: 99px; background: rgba(27, 67, 50, 0.08); overflow: hidden; }
     .pop-meter span { display: block; height: 100%; }
 
     .node-circle.is-crit { animation: blipPulse 1.15s ease-in-out infinite; }
@@ -453,8 +460,8 @@
       width: 16px;
       height: 16px;
       border-radius: 50%;
-      background: var(--cyan);
-      box-shadow: 0 0 0 5px rgba(6, 182, 212, 0.18), 0 0 16px var(--cyan);
+      background: var(--coral);
+      box-shadow: 0 0 0 5px rgba(227, 106, 69, 0.2), 0 0 16px rgba(227, 106, 69, 0.4);
     }
     .dispatch-pin em {
       position: absolute;
@@ -465,9 +472,9 @@
       font-size: 10px;
       letter-spacing: 0.12em;
       text-transform: uppercase;
-      color: var(--cyan-2);
+      color: var(--pine);
       white-space: nowrap;
-      text-shadow: 0 1px 2px #000;
+      text-shadow: 0 1px 0 #fff, 0 0 6px #fff;
     }
     .route-line { animation: routeFlow 1.05s linear infinite; }
 
@@ -482,7 +489,7 @@
       left: 14px;
       width: min(280px, calc(100% - 88px));
       padding: 12px 14px;
-      background: rgba(15, 23, 42, 0.72);
+      background: rgba(255, 252, 246, 0.92);
       border: 1px solid var(--line);
       border-radius: 16px;
       box-shadow: var(--shadow);
@@ -497,13 +504,13 @@
       margin: 0;
       padding: 10px 12px;
       list-style: none;
-      background: rgba(15, 23, 42, 0.72);
+      background: rgba(255, 252, 246, 0.92);
       border: 1px solid var(--line);
       border-radius: 14px;
       display: grid;
       gap: 5px;
     }
-    .legend li { display: flex; align-items: center; gap: 8px; color: #d5e2f0; font-size: 11.5px; }
+    .legend li { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 11.5px; }
     .swatch { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
     .swatch.ok { background: var(--emerald); box-shadow: 0 0 8px rgba(16, 185, 129, 0.7); }
     .swatch.warn { background: var(--amber); box-shadow: 0 0 8px rgba(245, 158, 11, 0.6); }
@@ -515,13 +522,13 @@
       max-width: min(340px, calc(100% - 380px));
       padding: 10px 12px;
       border-radius: 14px;
-      background: rgba(120, 53, 15, 0.78);
-      border: 1px solid rgba(245, 158, 11, 0.7);
-      color: #fff7e6;
-      box-shadow: 0 0 24px rgba(245, 158, 11, 0.2);
+      background: rgba(255, 246, 232, 0.96);
+      border: 1px solid rgba(224, 154, 43, 0.75);
+      color: #3d2a12;
+      box-shadow: 0 12px 28px rgba(138, 90, 16, 0.12);
     }
     .map-alert[hidden] { display: none !important; }
-    .map-alert strong { display: block; font-family: Syne, Outfit, sans-serif; letter-spacing: 0.04em; font-size: 12px; color: var(--amber-2); }
+    .map-alert strong { display: block; font-family: Fraunces, Georgia, serif; letter-spacing: 0.02em; font-size: 13px; color: var(--amber-2); }
     .map-alert span { display: block; margin-top: 3px; font-size: 12px; line-height: 1.35; }
 
     .metrics {
@@ -540,14 +547,14 @@
     .kpi {
       padding: 8px 10px;
       border-radius: 12px;
-      background: rgba(2, 6, 14, 0.38);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: #f6f3ec;
+      border: 1px solid rgba(27, 67, 50, 0.08);
     }
     .kpi em { display: block; font-style: normal; color: var(--dim); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; }
-    .kpi b { display: block; margin-top: 2px; font-family: Syne, Outfit, sans-serif; font-size: 22px; letter-spacing: -0.04em; font-weight: 750; }
+    .kpi b { display: block; margin-top: 2px; font-family: Fraunces, Georgia, serif; font-size: 22px; letter-spacing: -0.04em; font-weight: 680; }
     .kpi b.ok { color: var(--emerald); }
     .kpi b.warn { color: var(--amber-2); }
-    .kpi b.crit { color: #fca5a5; }
+    .kpi b.crit { color: #c2412d; }
     .kpi b.cyan { color: var(--cyan-2); }
     .kpi b.amber { color: var(--amber-2); }
     .metrics-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.15fr 0.95fr; gap: 12px; }
@@ -559,7 +566,7 @@
     .trace-head span, .empty-trace { color: var(--dim); font-size: 11px; }
     .trace-scroll { overflow: auto; min-height: 0; flex: 1; }
     table { width: 100%; border-collapse: collapse; font-size: 11.5px; font-variant-numeric: tabular-nums; }
-    th, td { padding: 5px 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); white-space: nowrap; }
+    th, td { padding: 5px 6px; border-bottom: 1px solid rgba(27, 67, 50, 0.08); white-space: nowrap; }
     th {
       position: sticky;
       top: 0;
@@ -569,11 +576,11 @@
       text-transform: uppercase;
       color: var(--dim);
       font-weight: 500;
-      background: rgba(15, 23, 42, 0.94);
+      background: #f7f4ee;
     }
     td.num, th.num { text-align: right; font-family: "IBM Plex Mono", ui-monospace, monospace; }
-    tr.dq td { color: #7f8ea3; }
-    tr.got td.name { color: white; }
+    tr.dq td { color: #6d7c74; }
+    tr.got td.name { color: var(--pine); font-weight: 750; }
     td.placed { color: var(--emerald); font-family: "IBM Plex Mono", ui-monospace, monospace; }
     tr.overflow td { color: var(--amber-2); }
     .empty-trace { padding: 8px 2px; line-height: 1.45; }
@@ -605,7 +612,7 @@
       z-index: 4000;
       display: grid;
       place-items: center;
-      background: rgba(7, 11, 18, 0.72);
+      background: rgba(231, 239, 230, 0.78);
       -webkit-backdrop-filter: blur(8px);
       backdrop-filter: blur(8px);
       opacity: 0;
@@ -619,8 +626,8 @@
       font-size: clamp(20px, 3vw, 28px);
       letter-spacing: 0.04em;
       line-height: 1.15;
-      color: white;
-      text-shadow: 0 0 18px rgba(6, 182, 212, 0.45);
+      color: var(--pine);
+      text-shadow: none;
     }
     .overlay-sub { margin-top: 8px; color: var(--muted); }
     .scanner {
@@ -632,8 +639,8 @@
       box-shadow: 0 0 16px var(--cyan);
       animation: scan 1s linear infinite;
     }
-    .loadbar { height: 3px; margin-top: 18px; border-radius: 99px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
-    .loadbar span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #06b6d4, #a5f3fc); }
+    .loadbar { height: 3px; margin-top: 18px; border-radius: 99px; background: rgba(27, 67, 50, 0.1); overflow: hidden; }
+    .loadbar span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #1b4332, #7dba8a); }
     .overlay.on .loadbar span { animation: fillbar 1s linear forwards; }
 
     @keyframes rise {
@@ -706,10 +713,15 @@
     <header class="topbar glass">
       <div class="brand">
         <div class="mark" aria-hidden="true">
-          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
-            <path d="M16 2.5L27.5 9.2V22.8L16 29.5L4.5 22.8V9.2L16 2.5Z" stroke="#06b6d4" stroke-width="1.6"/>
-            <circle cx="16" cy="16" r="6.5" stroke="#06b6d4" stroke-opacity="0.55"/>
-            <circle cx="16" cy="16" r="3" fill="#06b6d4"/>
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <path fill="#245C43" d="M16.8 18.4H28.2V28.4c0 .7-.6 1.2-1.3 1.2H16.8V18.4Z"/>
+            <path fill="#245C43" d="M16.6 18.8 23.2 11.6 29.6 18.8h-1.6l-4.8-4.9-4.8 4.9H16.6Z"/>
+            <path fill="#1B4332" d="M6 15.6h11.2V28.4c0 .7-.6 1.2-1.3 1.2H7.3c-.7 0-1.3-.5-1.3-1.2V15.6Z"/>
+            <path fill="#1B4332" d="M4.2 16.2 11.6 5.1 18.4 16.2h-1.7L11.6 8 5.9 16.2H4.2Z"/>
+            <rect x="7.3" y="17.8" width="3.1" height="2.6" rx=".45" fill="#F4F1E8"/>
+            <rect x="11.6" y="17.8" width="3.1" height="2.6" rx=".45" fill="#F4F1E8"/>
+            <rect x="21.3" y="21" width="3.1" height="2.5" rx=".45" fill="#F4F1E8"/>
+            <path fill="#E36A45" d="M9.2 23.1h4.2c.4 0 .7.3.7.7V29.4H8.5V23.8c0-.4.3-.7.7-.7Z"/>
           </svg>
         </div>
         <h1>NetShelter<span>Capacity Load-Balancing Matrix</span></h1>
@@ -840,7 +852,7 @@
     (function () {
       const STORAGE_KEY = 'netshelter.ny11.v1';
       const SPECS = ['General', 'Medical Rehab', 'Juvenile'];
-      const STATUS_COLOR = { ok: '#10b981', warn: '#f59e0b', crit: '#ef4444' };
+      const STATUS_COLOR = { ok: '#1f8a4d', warn: '#e09a2b', crit: '#d6453d' };
       const DISPATCH = { lat: 40.5895, lng: -74.1154, name: 'NY-11 Entry Dispatch' };
       const MAP_CENTER = [40.5795, -74.1154];
       const BASELINE = [
@@ -1097,7 +1109,7 @@
         node.core = L.circleMarker([node.lat, node.lng], {
           radius: 8,
           weight: 2,
-          color: '#e7eef8',
+          color: '#f6f3ec',
           fillColor: STATUS_COLOR.ok,
           fillOpacity: 1
         }).addTo(map);
@@ -1135,12 +1147,12 @@
         node.circle.setStyle({
           color,
           fillColor: color,
-          fillOpacity: status === 'crit' ? 0.4 : status === 'warn' ? 0.22 : 0.16,
+          fillOpacity: status === 'crit' ? 0.42 : status === 'warn' ? 0.3 : 0.24,
           weight: status === 'crit' ? 3 : 2
         });
         const path = node.circle.getElement && node.circle.getElement();
         if (path) path.classList.toggle('is-crit', status === 'crit');
-        node.core.setStyle({ fillColor: color, color: status === 'crit' ? '#fff' : '#e7eef8' });
+        node.core.setStyle({ fillColor: color, color: status === 'crit' ? '#fffdf8' : '#f6f3ec' });
         const open = Math.max(0, node.max - node.current);
         const pct = ((node.current / node.max) * 100).toFixed(1).replace(/\.0$/, '');
         node.circle.setTooltipContent(node.short + ' · ' + node.current + '/' + node.max + ' · ' + pct + '%');
@@ -1155,13 +1167,13 @@
           if (!node) return;
           const latlngs = [[DISPATCH.lat, DISPATCH.lng], [node.lat, node.lng]];
           routeLayer.addLayer(L.polyline(latlngs, {
-            color: '#06b6d4',
+            color: '#7dba8a',
             weight: 8,
-            opacity: 0.18,
+            opacity: 0.45,
             interactive: false
           }));
           const line = L.polyline(latlngs, {
-            color: '#67e8f9',
+            color: '#1b4332',
             weight: 2.5,
             opacity: 0.95,
             dashArray: '7 11',
@@ -1538,9 +1550,8 @@
           maxZoom: 16
         }).setView(MAP_CENTER, 11);
         L.control.zoom({ position: 'topright' }).addTo(map);
-        // CARTO Dark Matter now returns an API-key watermark instead of geography.
-        // Esri World Dark Gray Canvas is the keyless dark municipal basemap.
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        // Esri World Light Gray Canvas stays keyless and matches the daylight dashboard.
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
           attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
           maxZoom: 16,
           maxNativeZoom: 16
@@ -1549,7 +1560,7 @@
         const labelPane = map.getPane('labels');
         labelPane.style.zIndex = 250;
         labelPane.style.pointerEvents = 'none';
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
           pane: 'labels',
           maxZoom: 16,
           maxNativeZoom: 16,
@@ -1606,10 +1617,12 @@
             plugins: {
               legend: { display: false },
               tooltip: {
-                backgroundColor: 'rgba(15, 23, 42, 0.96)',
-                borderColor: 'rgba(255,255,255,0.08)',
+                backgroundColor: 'rgba(255, 252, 246, 0.98)',
+                borderColor: 'rgba(27, 67, 50, 0.12)',
                 borderWidth: 1,
-                titleFont: { family: 'Outfit' },
+                titleColor: '#1c2b24',
+                bodyColor: '#31443a',
+                titleFont: { family: 'Nunito' },
                 bodyFont: { family: '"IBM Plex Mono", monospace' },
                 callbacks: {
                   title(items) {
@@ -1627,16 +1640,16 @@
                 min: 0,
                 max: 100,
                 ticks: {
-                  color: '#8ea0b8',
+                  color: '#4e5f56',
                   stepSize: 25,
                   font: { family: '"IBM Plex Mono", monospace', size: 10 },
                   callback: (value) => value + '%'
                 },
-                grid: { color: 'rgba(255,255,255,0.06)' },
+                grid: { color: 'rgba(27, 67, 50, 0.08)' },
                 border: { display: false }
               },
               y: {
-                ticks: { color: '#e7eef8', font: { family: 'Outfit, sans-serif', size: 12 } },
+                ticks: { color: '#1c2b24', font: { family: 'Nunito, sans-serif', size: 12 } },
                 grid: { display: false },
                 border: { display: false }
               }
@@ -1653,12 +1666,12 @@
               ctx.save();
               ctx.beginPath();
               ctx.setLineDash([4, 4]);
-              ctx.strokeStyle = 'rgba(239, 68, 68, 0.75)';
+              ctx.strokeStyle = 'rgba(214, 69, 61, 0.8)';
               ctx.lineWidth = 1;
               ctx.moveTo(x, yScale.top);
               ctx.lineTo(x, yScale.bottom);
               ctx.stroke();
-              ctx.fillStyle = 'rgba(252, 165, 165, 0.95)';
+              ctx.fillStyle = '#9f2d24';
               ctx.font = '10px "IBM Plex Mono", monospace';
               ctx.fillText('95%', x + 4, yScale.top + 10);
               ctx.restore();
