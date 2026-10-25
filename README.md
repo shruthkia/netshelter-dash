@@ -1,6 +1,8 @@
 # NetShelter: Capacity Load-Balancing Matrix
 
-A single-page civic dashboard for the NY-11 Congressional App Challenge. It load-balances a simulated shelter intake across four facilities on Staten Island and the Brooklyn edge of the district.
+A single-page civic dashboard for the NY-11 Congressional App Challenge. It load-balances a shelter intake across four facilities on Staten Island and the Brooklyn edge of the district.
+
+The citywide census comes from the [NYC Open Data DHS Daily Report](https://data.cityofnewyork.us/Social-Services/DHS-Daily-Report/k46n-sa2m) (`k46n-sa2m`). On load, the page requests the latest 42 census days. The header, the census totals, the day-to-day chart, and the intake presets all use that response. A saved snapshot is bundled in the page so the dashboard still opens if the request fails. The report is a citywide count of people in shelter. It does not publish facility capacity or a borough split, so the four NY-11 nodes stay a planning model with opening bed counts.
 
 Everything runs in the browser. Occupancy, the score trace, and the telemetry log persist in `localStorage`. No account, server, or database is required.
 
@@ -33,11 +35,13 @@ Map markers follow occupancy: green under 70%, amber from 70% through 95%, and a
 
 ## Judge shortcuts
 
-The intake panel includes four presets:
+The intake panel builds four presets from the loaded census:
 
-- Medical spike · 8
-- Youth wave · 12
-- General surge · 25
-- Crisis overflow · 80
+- Single adults, the latest one-day rise
+- Children, the latest one-day rise, placed with the Juvenile constraint
+- People in families with children, the latest one-day rise
+- The largest one-day rise in the loaded window
+
+The intake field starts at the latest one-day rise in total people in shelter. Clicking a chart bar for a rise loads that count as the intake.
 
 **Restore baseline** returns the four nodes to their opening occupancy and clears the vectors. **Clear** only empties the console.

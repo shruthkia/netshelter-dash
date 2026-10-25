@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#e7efe6" />
-  <meta name="description" content="NetShelter is the NY-11 capacity load-balancing matrix. It places shelter intake across Staten Island and Bay Ridge using live occupancy, specialization, and distance from dispatch." />
+  <meta name="description" content="NetShelter is the NY-11 capacity load-balancing matrix. Census totals and intake waves come from the NYC DHS Daily Report, and each wave is placed across Staten Island and Bay Ridge by occupancy, specialization, and distance." />
   <title>NetShelter: Capacity Load-Balancing Matrix</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23F4F1E8'/%3E%3Cpath fill='%23245C43' d='M16.8 18.4H28.2V28.4c0 .7-.6 1.2-1.3 1.2H16.8V18.4z'/%3E%3Cpath fill='%23245C43' d='M16.6 18.8 23.2 11.6 29.6 18.8h-1.6l-4.8-4.9-4.8 4.9H16.6z'/%3E%3Cpath fill='%231B4332' d='M6 15.6h11.2V28.4c0 .7-.6 1.2-1.3 1.2H7.3c-.7 0-1.3-.5-1.3-1.2V15.6z'/%3E%3Cpath fill='%231B4332' d='M4.2 16.2 11.6 5.1 18.4 16.2h-1.7L11.6 8 5.9 16.2H4.2z'/%3E%3Crect x='7.3' y='17.8' width='3.1' height='2.6' rx='.45' fill='%23F4F1E8'/%3E%3Crect x='11.6' y='17.8' width='3.1' height='2.6' rx='.45' fill='%23F4F1E8'/%3E%3Crect x='21.3' y='21' width='3.1' height='2.5' rx='.45' fill='%23F4F1E8'/%3E%3Cpath fill='%23E36A45' d='M9.2 23.1h4.2c.4 0 .7.3.7.7V29.4H8.5V23.8c0-.4.3-.7.7-.7z'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -559,7 +559,12 @@
     .kpi b.amber { color: var(--amber-2); }
     .metrics-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.15fr 0.95fr; gap: 12px; }
     .chart-wrap, .trace { min-width: 0; min-height: 0; position: relative; }
-    .chart-wrap { height: 100%; }
+    .chart-wrap { height: 100%; display: flex; flex-direction: column; }
+    .chart-caption { margin: 0 0 4px; }
+    .chart-wrap canvas { flex: 1; min-height: 0; }
+    .metrics h2 { margin: 0; font-size: 16px; letter-spacing: -0.03em; }
+    .census-asof { margin-top: 3px; }
+    .census-asof a { color: var(--pine); font-weight: 750; }
     .trace { display: flex; flex-direction: column; }
     .trace-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; margin-bottom: 6px; }
     .trace-head h3 { margin: 0; font-size: 13px; letter-spacing: -0.02em; }
@@ -728,6 +733,7 @@
       </div>
       <div class="top-meta">
         <div class="chip">Congressional App Challenge · NY-11</div>
+        <div class="chip" id="census-chip">DHS census · loading</div>
         <div id="status-pill" class="pill crit" role="status"><i></i><span id="status-text">CRITICAL</span></div>
         <time id="clock" class="clock">--:--:-- ET</time>
       </div>
@@ -737,12 +743,13 @@
       <section class="panel glass controls-panel">
         <p class="kicker">Control parameters</p>
         <h2>Intake simulation</h2>
+        <p class="lede" id="census-note">Presets are one-day rises from the NYC DHS Daily Report. The four NY-11 nodes are a planning model.</p>
         <pre class="formula" title="Distance is haversine kilometers from entry dispatch at 40.5895, −74.1154. A node at maximum capacity is disqualified.">score = (vacancies × 0.5) + (match ? 30 : 0) − (km × 0.2)</pre>
         <form id="intake-form" novalidate>
           <div class="fields">
             <div class="field">
               <label for="intake-size">Intake size</label>
-              <input id="intake-size" name="intake" type="number" inputmode="numeric" min="1" max="500" step="1" value="25" autocomplete="off" />
+              <input id="intake-size" name="intake" type="number" inputmode="numeric" min="1" max="5000" step="1" value="25" autocomplete="off" />
             </div>
             <div class="field">
               <label for="spec">Specialization constraint</label>
@@ -756,13 +763,8 @@
           <p id="form-error" class="form-error" role="alert"></p>
           <button class="execute" id="execute" type="submit">Execute balance matrix</button>
         </form>
-        <p class="preset-label">One-click waves</p>
-        <div class="presets" id="presets">
-          <button type="button" data-intake="8" data-spec="Medical Rehab">Medical spike · 8</button>
-          <button type="button" data-intake="12" data-spec="Juvenile">Youth wave · 12</button>
-          <button type="button" data-intake="25" data-spec="General">General surge · 25</button>
-          <button type="button" data-intake="80" data-spec="General">Crisis overflow · 80</button>
-        </div>
+        <p class="preset-label">Census waves</p>
+        <div class="presets" id="presets"></div>
         <div class="row-actions">
           <button type="button" class="ghost" id="reset">Restore baseline</button>
           <span class="fine" id="memory-note">Stored in this browser</span>
@@ -810,20 +812,22 @@
     <section class="metrics glass">
       <div class="metrics-head">
         <div>
-          <p class="kicker">Analytics</p>
-          <h2>Live capacity status</h2>
+          <p class="kicker">NYC Open Data</p>
+          <h2>DHS daily census</h2>
+          <p class="fine census-asof" id="census-asof">Loading the shelter census…</p>
         </div>
         <div class="kpi-row">
-          <div class="kpi"><em>Network load</em><b id="kpi-load" class="warn">—</b></div>
-          <div class="kpi"><em>Open beds</em><b id="kpi-beds" class="cyan">—</b></div>
-          <div class="kpi"><em>Critical nodes</em><b id="kpi-critical" class="crit">—</b></div>
-          <div class="kpi"><em>Valve routed</em><b id="kpi-valve">—</b></div>
+          <div class="kpi"><em>In shelter</em><b id="kpi-individuals" class="cyan">—</b></div>
+          <div class="kpi"><em>Children</em><b id="kpi-children">—</b></div>
+          <div class="kpi"><em>Single adults</em><b id="kpi-single">—</b></div>
+          <div class="kpi"><em>Families w/ kids</em><b id="kpi-families">—</b></div>
         </div>
       </div>
       <div class="node-block" id="node-list" aria-label="Facility nodes"></div>
       <div class="metrics-body">
         <div class="chart-wrap">
-          <canvas id="capacity-chart" aria-label="Horizontal bar chart of shelter occupancy percent"></canvas>
+          <p class="fine chart-caption">Day-to-day change in the DHS census. Green is a rise, coral is a decline. Click a rise to load it.</p>
+          <canvas id="capacity-chart" aria-label="Bar chart of the day-to-day change in the NYC DHS shelter census"></canvas>
         </div>
         <div class="trace">
           <div class="trace-head">
@@ -861,6 +865,11 @@
         { id: 'new-dorp', name: 'New Dorp Rehab Point', short: 'New Dorp', lat: 40.5735, lng: -74.1112, max: 30, current: 28, tag: 'Medical Rehab' },
         { id: 'bay-ridge', name: 'Bay Ridge Transit Point', short: 'Bay Ridge', lat: 40.6254, lng: -74.0298, max: 120, current: 102, tag: 'General' }
       ];
+      const DHS_URL = 'https://data.cityofnewyork.us/resource/k46n-sa2m.json?$select=date_of_census,total_individuals_in_shelter,total_adults_in_shelter,total_children_in_shelter,total_single_adults_in_shelter,families_with_children_in_shelter,total_individuals_in_families_with_children_in_shelter_,individuals_in_adult_families_in_shelter&$order=date_of_census%20DESC&$limit=42';
+      const DHS_PAGE = 'https://data.cityofnewyork.us/Social-Services/DHS-Daily-Report/k46n-sa2m';
+      // Saved NYC Open Data snapshot, newest census first. Live responses replace it.
+      // Tuple: date, individuals, adults, children, single adults, families with children, people in those families, people in adult families.
+      const CENSUS_FALLBACK = [["2026-10-24",83811,55815,27996,27087,16349,51623,5101],["2026-10-23",83829,55845,27984,27171,16327,51568,5090],["2026-10-22",83766,55798,27968,27159,16304,51526,5081],["2026-10-21",83682,55795,27887,27211,16260,51396,5075],["2026-10-20",83814,55822,27992,27122,16332,51608,5084],["2026-10-19",84224,56038,28186,27163,16440,51937,5124],["2026-10-18",84075,55919,28156,27070,16410,51869,5136],["2026-10-17",83976,55845,28131,27032,16382,51804,5140],["2026-10-16",83886,55805,28081,27008,16369,51750,5128],["2026-10-15",83781,55721,28060,26936,16358,51707,5138],["2026-10-14",84037,55880,28157,26983,16422,51901,5153],["2026-10-13",84106,55918,28188,27017,16426,51936,5153],["2026-10-12",84172,55946,28226,27045,16427,51980,5147],["2026-10-11",83936,55803,28133,26984,16379,51818,5134],["2026-10-10",83980,55767,28213,26889,16423,51960,5131],["2026-10-09",83921,55735,28186,26878,16393,51905,5138],["2026-10-08",84042,55853,28189,27010,16375,51879,5153],["2026-10-07",84178,55964,28214,27064,16399,51957,5157],["2026-10-06",84266,55986,28280,27042,16431,52065,5159],["2026-10-05",84379,56062,28317,27064,16482,52178,5137],["2026-10-04",84331,56014,28317,27005,16478,52172,5154],["2026-10-03",84108,55816,28292,26833,16464,52124,5151],["2026-10-02",84095,55864,28231,26932,16427,52017,5146],["2026-10-01",83920,55783,28137,26909,16371,51866,5145],["2026-09-30",84052,55935,28117,27054,16372,51863,5135],["2026-09-29",83944,55811,28133,26953,16371,51869,5122],["2026-09-28",84374,56032,28342,26895,16518,52294,5185],["2026-09-27",84271,55960,28311,26864,16500,52241,5166],["2026-09-26",84119,55883,28236,26831,16457,52111,5177],["2026-09-25",84110,55911,28199,26903,16422,52034,5173],["2026-09-24",83970,55843,28127,26898,16378,51890,5182],["2026-09-23",83879,55767,28112,26841,16360,51866,5172],["2026-09-22",83823,55721,28102,26805,16363,51858,5160],["2026-09-21",84147,55863,28284,26783,16467,52197,5167],["2026-09-20",83949,55697,28252,26644,16451,52156,5149],["2026-09-19",83939,55677,28262,26606,16447,52175,5158],["2026-09-18",83792,55609,28183,26594,16411,52043,5155],["2026-09-17",83895,55699,28196,26662,16411,52071,5162],["2026-09-16",83906,55710,28196,26638,16423,52091,5177],["2026-09-15",83761,55626,28135,26593,16396,51997,5171],["2026-09-14",83941,55712,28229,26560,16460,52196,5185],["2026-09-13",83855,55644,28211,26503,16447,52160,5192]];
 
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -869,7 +878,11 @@
         logs: [],
         valve: { active: false, lastOverflow: 0, totalRouted: 0, lastIntake: 0, lastSpec: 'General' },
         trace: null,
-        running: false
+        running: false,
+        censusRows: [],
+        censusDeltas: [],
+        censusSource: 'cache',
+        intakeTouched: false
       };
 
       const $ = (id) => document.getElementById(id);
@@ -1030,7 +1043,7 @@
         if (!/^\d+$/.test(raw)) return { error: 'Enter a whole number of people.' };
         const intake = Number(raw);
         if (intake < 1) return { error: 'Intake has to be at least 1 person.' };
-        if (intake > 500) return { error: 'This desk simulates waves up to 500 people.' };
+        if (intake > 5000) return { error: 'This desk simulates waves up to 5,000 people.' };
         const spec = specSelect.value;
         if (!SPECS.includes(spec)) return { error: 'Choose a specialization constraint.' };
         return { intake, spec };
@@ -1254,19 +1267,197 @@
         requestAnimationFrame(step);
       }
 
+      const countFormat = new Intl.NumberFormat('en-US');
+
+      function censusDate(iso) {
+        const [year, month, day] = iso.split('-').map(Number);
+        return new Intl.DateTimeFormat('en-US', {
+          month: 'short',
+          day: 'numeric',
+          timeZone: 'UTC'
+        }).format(new Date(Date.UTC(year, month - 1, day)));
+      }
+
+      function priorDate(iso) {
+        const [year, month, day] = iso.split('-').map(Number);
+        const date = new Date(Date.UTC(year, month - 1, day));
+        date.setUTCDate(date.getUTCDate() - 1);
+        return date.toISOString().slice(0, 10);
+      }
+
+      function rowFromTuple(tuple) {
+        const [date, individuals, adults, children, singleAdults, families, familyIndividuals, adultFamilyIndividuals] = tuple;
+        return { date, individuals, adults, children, singleAdults, families, familyIndividuals, adultFamilyIndividuals };
+      }
+
+      function rowFromApi(row) {
+        const date = String(row.date_of_census || '').slice(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+        const num = (key) => {
+          const value = Number(row[key]);
+          return Number.isFinite(value) ? Math.round(value) : null;
+        };
+        const parsed = {
+          date,
+          individuals: num('total_individuals_in_shelter'),
+          adults: num('total_adults_in_shelter'),
+          children: num('total_children_in_shelter'),
+          singleAdults: num('total_single_adults_in_shelter'),
+          families: num('families_with_children_in_shelter'),
+          familyIndividuals: num('total_individuals_in_families_with_children_in_shelter_'),
+          adultFamilyIndividuals: num('individuals_in_adult_families_in_shelter')
+        };
+        if (Object.values(parsed).some((value) => value == null)) return null;
+        return parsed;
+      }
+
+      function censusDeltas(rows) {
+        const deltas = [];
+        for (let i = 0; i < rows.length - 1; i += 1) {
+          const today = rows[i];
+          const prev = rows[i + 1];
+          if (prev.date !== priorDate(today.date)) continue;
+          deltas.push({
+            date: today.date,
+            individuals: today.individuals - prev.individuals,
+            children: today.children - prev.children,
+            singleAdults: today.singleAdults - prev.singleAdults,
+            familyIndividuals: today.familyIndividuals - prev.familyIndividuals
+          });
+        }
+        return deltas;
+      }
+
+      function latestRise(deltas, key) {
+        return deltas.find((delta) => delta[key] > 0) || null;
+      }
+
+      function paintPresets(deltas) {
+        const presets = $('presets');
+        const peak = deltas.reduce((best, delta) => (
+          !best || delta.individuals > best.individuals ? delta : best
+        ), null);
+        const waves = [
+          latestRise(deltas, 'singleAdults') && {
+            rise: latestRise(deltas, 'singleAdults'),
+            key: 'singleAdults',
+            spec: 'General',
+            label: 'Single adults',
+            title: 'Latest one-day rise in single adults in the DHS shelter census.'
+          },
+          latestRise(deltas, 'children') && {
+            rise: latestRise(deltas, 'children'),
+            key: 'children',
+            spec: 'Juvenile',
+            label: 'Children',
+            title: 'Latest one-day rise in children in families with children. The matrix places this wave with the Juvenile constraint.'
+          },
+          latestRise(deltas, 'familyIndividuals') && {
+            rise: latestRise(deltas, 'familyIndividuals'),
+            key: 'familyIndividuals',
+            spec: 'General',
+            label: 'Families',
+            title: 'Latest one-day rise in people in families with children.'
+          },
+          peak && peak.individuals > 0 && {
+            rise: peak,
+            key: 'individuals',
+            spec: 'General',
+            label: 'Peak rise',
+            title: 'Largest one-day rise in total people in shelter across the loaded census window.'
+          }
+        ].filter(Boolean);
+        presets.replaceChildren();
+        waves.forEach((wave) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.dataset.intake = String(wave.rise[wave.key]);
+          button.dataset.spec = wave.spec;
+          button.title = wave.title + ' ' + censusDate(wave.rise.date) + '.';
+          button.textContent = wave.label + ' +' + countFormat.format(wave.rise[wave.key]) + ' · ' + censusDate(wave.rise.date);
+          presets.appendChild(button);
+        });
+      }
+
+      function paintCensus() {
+        const latest = state.censusRows[0];
+        const chip = $('census-chip');
+        const asof = $('census-asof');
+        const note = $('census-note');
+        if (!latest) return;
+        chip.textContent = 'DHS · ' + censusDate(latest.date) + ' · ' + countFormat.format(latest.individuals);
+        const source = state.censusSource === 'live'
+          ? 'live from NYC Open Data'
+          : state.censusSource === 'error'
+            ? 'saved snapshot, the live report did not load'
+            : 'saved snapshot, checking NYC Open Data';
+        const year = latest.date.slice(0, 4);
+        const stamp = latest.date + '|' + state.censusSource;
+        if (asof.dataset.stamp !== stamp) {
+          asof.dataset.stamp = stamp;
+          asof.replaceChildren();
+          asof.append(document.createTextNode('Census date ' + censusDate(latest.date) + ', ' + year + ' · ' + source + ' · '));
+          const link = document.createElement('a');
+          link.href = DHS_PAGE;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.textContent = 'DHS Daily Report';
+          asof.append(link);
+        }
+        note.textContent = 'Presets are one-day rises in the citywide DHS census. A children rise uses the Juvenile constraint. These four nodes are a NY-11 planning model: the report has no facility capacity.';
+        const individuals = $('kpi-individuals');
+        const children = $('kpi-children');
+        const single = $('kpi-single');
+        const families = $('kpi-families');
+        individuals.title = 'Total individuals in the DHS shelter system on the census date.';
+        children.title = 'Children in families with children in shelter.';
+        single.title = 'Single adult men and women in shelter.';
+        families.title = 'Families with children in shelter. Adult families are counted separately and are not included here.';
+        tweenNumber(individuals, latest.individuals, (n) => countFormat.format(n));
+        tweenNumber(children, latest.children, (n) => countFormat.format(n));
+        tweenNumber(single, latest.singleAdults, (n) => countFormat.format(n));
+        tweenNumber(families, latest.families, (n) => countFormat.format(n));
+        if (!state.intakeTouched) {
+          const rise = latestRise(state.censusDeltas, 'individuals');
+          if (rise) intakeInput.value = String(rise.individuals);
+        }
+      }
+
+      function applyCensus(rows, source) {
+        const clean = rows
+          .filter((row) => row && /^\d{4}-\d{2}-\d{2}$/.test(row.date))
+          .slice()
+          .sort((a, b) => b.date.localeCompare(a.date));
+        if (clean.length < 2) return;
+        state.censusRows = clean;
+        state.censusDeltas = censusDeltas(clean);
+        state.censusSource = source;
+        paintPresets(state.censusDeltas);
+        paintCensus();
+        renderChart();
+      }
+
+      async function refreshCensus() {
+        try {
+          const response = await fetch(DHS_URL, { headers: { Accept: 'application/json' } });
+          if (!response.ok) throw new Error('DHS report returned ' + response.status);
+          const payload = await response.json();
+          if (!Array.isArray(payload)) throw new Error('DHS report was not a list of census rows.');
+          const rows = payload.map(rowFromApi).filter(Boolean);
+          if (rows.length < 2) throw new Error('DHS report did not include two census dates.');
+          applyCensus(rows, 'live');
+          const latest = state.censusRows[0];
+          pushLogs([makeEntry('sys', 'SYS:', 'DHS Daily Report live for ' + latest.date + '. ' + countFormat.format(latest.individuals) + ' individuals in shelter.')], false);
+        } catch (err) {
+          state.censusSource = 'error';
+          paintCensus();
+          pushLogs([makeEntry('warning', 'WARNING:', 'DHS Daily Report did not load. Showing the saved NYC Open Data snapshot.')], false);
+        }
+      }
+
       function renderKpis() {
         const snap = networkSnapshot();
-        const loadEl = $('kpi-load');
-        const bedsEl = $('kpi-beds');
-        const critEl = $('kpi-critical');
-        const valveKpi = $('kpi-valve');
-        loadEl.className = snap.load > 95 ? 'crit' : snap.load >= 70 ? 'warn' : 'ok';
-        critEl.className = snap.critical > 0 ? 'crit' : 'ok';
-        valveKpi.className = state.valve.totalRouted > 0 ? 'amber' : '';
-        tweenNumber(loadEl, Math.round(snap.load), (n) => n + '%');
-        tweenNumber(bedsEl, snap.open, (n) => String(n));
-        tweenNumber(critEl, snap.critical, (n) => String(n));
-        tweenNumber(valveKpi, state.valve.totalRouted, (n) => String(n));
+        paintCensus();
         statusPill.className = 'pill ' + snap.worst;
         statusText.textContent = snap.worst === 'crit' ? 'CRITICAL' : snap.worst === 'warn' ? 'STRAINED' : 'BALANCED';
         const title = snap.critical
@@ -1384,9 +1575,10 @@
 
       function renderChart() {
         if (!chart) return;
-        chart.data.labels = state.nodes.map((node) => node.short);
-        chart.data.datasets[0].data = state.nodes.map((node) => (node.current / node.max) * 100);
-        chart.data.datasets[0].backgroundColor = state.nodes.map((node) => STATUS_COLOR[statusOf(node)]);
+        const deltas = state.censusDeltas.slice().reverse();
+        chart.data.labels = deltas.map((delta) => censusDate(delta.date));
+        chart.data.datasets[0].data = deltas.map((delta) => delta.individuals);
+        chart.data.datasets[0].backgroundColor = deltas.map((delta) => delta.individuals >= 0 ? '#1f8a4d' : '#e36a45');
         chart.update();
       }
 
@@ -1588,27 +1780,32 @@
 
       function initChart() {
         const context = $('capacity-chart');
+        const deltas = state.censusDeltas.slice().reverse();
         chart = new Chart(context, {
           type: 'bar',
           data: {
-            labels: state.nodes.map((node) => node.short),
+            labels: deltas.map((delta) => censusDate(delta.date)),
             datasets: [{
-              label: 'Occupancy',
-              data: state.nodes.map((node) => (node.current / node.max) * 100),
-              backgroundColor: state.nodes.map((node) => STATUS_COLOR[statusOf(node)]),
+              label: 'Net change',
+              data: deltas.map((delta) => delta.individuals),
+              backgroundColor: deltas.map((delta) => delta.individuals >= 0 ? '#1f8a4d' : '#e36a45'),
               borderWidth: 0,
-              borderRadius: 7,
-              barThickness: 16
+              borderRadius: 4,
+              maxBarThickness: 14
             }]
           },
           options: {
-            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             animation: { duration: reduceMotion ? 0 : 700, easing: 'easeOutCubic' },
             onClick(event, elements) {
-              if (!elements.length) return;
-              focusNode(state.nodes[elements[0].index].id);
+              if (!elements.length || state.running) return;
+              const delta = state.censusDeltas.slice().reverse()[elements[0].index];
+              if (!delta || delta.individuals <= 0) return;
+              state.intakeTouched = true;
+              intakeInput.value = String(delta.individuals);
+              specSelect.value = 'General';
+              showError('');
             },
             onHover(event, elements) {
               const target = event.native && event.native.target;
@@ -1626,57 +1823,40 @@
                 bodyFont: { family: '"IBM Plex Mono", monospace' },
                 callbacks: {
                   title(items) {
-                    return state.nodes[items[0].dataIndex].name;
+                    const delta = state.censusDeltas.slice().reverse()[items[0].dataIndex];
+                    return delta ? delta.date : '';
                   },
                   label(item) {
-                    const node = state.nodes[item.dataIndex];
-                    return ' ' + node.current + ' / ' + node.max + ' beds · ' + item.parsed.x.toFixed(1) + '%';
+                    const value = item.parsed.y;
+                    const sign = value > 0 ? '+' : '';
+                    return ' ' + sign + countFormat.format(value) + ' people from the previous census day';
                   }
                 }
               }
             },
             scales: {
               x: {
-                min: 0,
-                max: 100,
                 ticks: {
                   color: '#4e5f56',
-                  stepSize: 25,
-                  font: { family: '"IBM Plex Mono", monospace', size: 10 },
-                  callback: (value) => value + '%'
+                  maxRotation: 0,
+                  autoSkip: true,
+                  maxTicksLimit: 6,
+                  font: { family: 'Nunito, sans-serif', size: 10 }
                 },
-                grid: { color: 'rgba(27, 67, 50, 0.08)' },
+                grid: { display: false },
                 border: { display: false }
               },
               y: {
-                ticks: { color: '#1c2b24', font: { family: 'Nunito, sans-serif', size: 12 } },
-                grid: { display: false },
+                ticks: {
+                  color: '#4e5f56',
+                  font: { family: '"IBM Plex Mono", monospace', size: 10 },
+                  callback: (value) => (value > 0 ? '+' : '') + countFormat.format(value)
+                },
+                grid: { color: 'rgba(27, 67, 50, 0.08)' },
                 border: { display: false }
               }
             }
-          },
-          plugins: [{
-            id: 'urgentThreshold',
-            afterDatasetsDraw(chartInstance) {
-              const xScale = chartInstance.scales.x;
-              const yScale = chartInstance.scales.y;
-              if (!xScale || !yScale) return;
-              const x = xScale.getPixelForValue(95);
-              const ctx = chartInstance.ctx;
-              ctx.save();
-              ctx.beginPath();
-              ctx.setLineDash([4, 4]);
-              ctx.strokeStyle = 'rgba(214, 69, 61, 0.8)';
-              ctx.lineWidth = 1;
-              ctx.moveTo(x, yScale.top);
-              ctx.lineTo(x, yScale.bottom);
-              ctx.stroke();
-              ctx.fillStyle = '#9f2d24';
-              ctx.font = '10px "IBM Plex Mono", monospace';
-              ctx.fillText('95%', x + 4, yScale.top + 10);
-              ctx.restore();
-            }
-          }]
+          }
         });
       }
 
@@ -1686,18 +1866,23 @@
           return;
         }
         loadMemory();
+        applyCensus(CENSUS_FALLBACK.map(rowFromTuple), 'cache');
         initMap();
         initChart();
         state.logs.forEach(paintLog);
         render();
         pushLogs([makeEntry('sys', 'SYS:', 'Matrix online. Four NY-11 nodes synced from local memory. Dispatch locked at 40.5895, -74.1154.')], false);
+        refreshCensus();
         renderClock();
         setInterval(renderClock, 1000);
         $('intake-form').addEventListener('submit', onSubmit);
         intakeInput.addEventListener('wheel', () => intakeInput.blur(), { passive: true });
+        intakeInput.addEventListener('input', () => { state.intakeTouched = true; });
+        specSelect.addEventListener('change', () => { state.intakeTouched = true; });
         $('presets').addEventListener('click', (event) => {
           const button = event.target.closest('button');
           if (!button || state.running) return;
+          state.intakeTouched = true;
           intakeInput.value = button.dataset.intake;
           specSelect.value = button.dataset.spec;
           $('intake-form').requestSubmit();
@@ -1721,7 +1906,15 @@
         getState: () => ({
           nodes: state.nodes.map(({ id, name, short, current, max, tag, lat, lng }) => ({ id, name, short, current, max, tag, lat, lng })),
           valve: { ...state.valve },
-          trace: state.trace
+          trace: state.trace,
+          census: state.censusRows[0] ? {
+            source: state.censusSource,
+            date: state.censusRows[0].date,
+            individuals: state.censusRows[0].individuals,
+            children: state.censusRows[0].children,
+            singleAdults: state.censusRows[0].singleAdults,
+            families: state.censusRows[0].families
+          } : null
         })
       };
 
