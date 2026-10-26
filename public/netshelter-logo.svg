@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="NetShelter">
+  <rect width="32" height="32" rx="8" fill="#152033"/>
+  <g fill="none" stroke="#E8EEF8" stroke-width="1.35" stroke-linecap="round">
+    <circle cx="16" cy="16" r="9.4"/>
+    <path d="M16 16 L16 6.6 M16 16 L24.14 20.7 M16 16 L7.86 20.7"/>
+  </g>
+  <g fill="#E8EEF8">
+    <circle cx="16" cy="6.6" r="1.9"/>
+    <circle cx="24.14" cy="20.7" r="1.9"/>
+    <circle cx="7.86" cy="20.7" r="1.9"/>
+  </g>
+  <circle cx="16" cy="16" r="2.35" fill="#E36B2C"/>
+</svg>
