@@ -3,593 +3,565 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#e7efe6" />
-  <meta name="description" content="NetShelter is the NY-11 capacity load-balancing matrix. Census totals and intake waves come from the NYC DHS Daily Report, and each wave is placed across Staten Island and Bay Ridge by occupancy, specialization, and distance." />
-  <title>NetShelter: Capacity Load-Balancing Matrix</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23F4F1E8'/%3E%3Cpath fill='%23245C43' d='M16.8 18.4H28.2V28.4c0 .7-.6 1.2-1.3 1.2H16.8V18.4z'/%3E%3Cpath fill='%23245C43' d='M16.6 18.8 23.2 11.6 29.6 18.8h-1.6l-4.8-4.9-4.8 4.9H16.6z'/%3E%3Cpath fill='%231B4332' d='M6 15.6h11.2V28.4c0 .7-.6 1.2-1.3 1.2H7.3c-.7 0-1.3-.5-1.3-1.2V15.6z'/%3E%3Cpath fill='%231B4332' d='M4.2 16.2 11.6 5.1 18.4 16.2h-1.7L11.6 8 5.9 16.2H4.2z'/%3E%3Crect x='7.3' y='17.8' width='3.1' height='2.6' rx='.45' fill='%23F4F1E8'/%3E%3Crect x='11.6' y='17.8' width='3.1' height='2.6' rx='.45' fill='%23F4F1E8'/%3E%3Crect x='21.3' y='21' width='3.1' height='2.5' rx='.45' fill='%23F4F1E8'/%3E%3Cpath fill='%23E36A45' d='M9.2 23.1h4.2c.4 0 .7.3.7.7V29.4H8.5V23.8c0-.4.3-.7.7-.7z'/%3E%3C/svg%3E" />
+  <meta name="theme-color" content="#e8edf4" />
+  <meta name="description" content="NetShelter routes incoming people across the NY-11 shelter network by available beds, care requirements, and distance." />
+  <title>NetShelter · NY-11 Capacity Network</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23152033'/%3E%3Ccircle cx='16' cy='16' r='9.2' fill='none' stroke='%23E8EEF8' stroke-width='1.6'/%3E%3Ccircle cx='16' cy='10.1' r='1.7' fill='%23E8EEF8'/%3E%3Ccircle cx='10.6' cy='19.4' r='1.7' fill='%23E8EEF8'/%3E%3Ccircle cx='21.4' cy='19.4' r='1.7' fill='%23E8EEF8'/%3E%3Cpath d='M16%2012v2.4M12.1%2018.1l2.3-1.5M19.9%2018.1l-2.3-1.5' fill='none' stroke='%23E8EEF8' stroke-width='1.4' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16.1' r='2.15' fill='%23E36B2C'/%3E%3C/svg%3E" />
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem('netshelter.theme');
+        var theme = saved === 'light' || saved === 'dark'
+          ? saved
+          : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.dataset.theme = theme;
+      } catch (err) {
+        document.documentElement.dataset.theme = 'light';
+      }
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,680;9..144,760&family=IBM+Plex+Mono:wght@400;500&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Outfit:wght@500;600;700;800&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
   <style>
     :root {
-      --bg: #e7efe6;
-      --card: rgba(255, 252, 246, 0.9);
-      --line: rgba(27, 58, 42, 0.12);
-      --text: #1c2b24;
-      --muted: #516158;
-      --dim: #4e5f56;
-      --pine: #1b4332;
-      --cyan: #1b4332;
-      --cyan-2: #1f6b45;
-      --emerald: #1f8a4d;
-      --crimson: #d6453d;
-      --amber: #e09a2b;
-      --amber-2: #8a5a10;
-      --violet: #5b4b86;
-      --coral: #e36a45;
-      --cream: #fffdf8;
-      --shadow: 0 16px 36px rgba(48, 72, 56, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-      --radius: 22px;
+      --bg: #e8edf4;
+      --card: #ffffff;
+      --line: rgba(21, 35, 59, 0.12);
+      --text: #152033;
+      --muted: #3d4c63;
+      --accent: #1d4e89;
+      --accent-soft: #e7eef8;
+      --chip: #eef3f9;
+      --input: #ffffff;
+      --console: #f4f7fb;
+      --map: #d5dde8;
+      --shadow: 0 14px 34px rgba(21, 35, 59, 0.08);
+      --ok: #047857;
+      --warn: #c2410c;
+      --crit: #be123c;
+      --offline: #475569;
+      --neutral: #334155;
+      --radius: 18px;
+      color-scheme: light;
     }
-
+    [data-theme="dark"] {
+      --bg: #0c121c;
+      --card: #161e2e;
+      --line: rgba(232, 238, 248, 0.12);
+      --text: #e8eef8;
+      --muted: #c5d0e0;
+      --accent: #8eb6ff;
+      --accent-soft: #1c2c48;
+      --chip: #1a2436;
+      --input: #101828;
+      --console: #0b111b;
+      --map: #0e141d;
+      --shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+      color-scheme: dark;
+    }
     * { box-sizing: border-box; }
-    html { color-scheme: light; }
+    [hidden] { display: none !important; }
     html, body { height: 100%; }
     body {
       margin: 0;
-      min-height: 100dvh;
       color: var(--text);
-      font-family: Nunito, "Segoe UI", sans-serif;
-      font-size: 14px;
+      font-family: "Source Sans 3", "Segoe UI", sans-serif;
+      font-size: 15px;
       background:
-        radial-gradient(1100px 560px at -6% -12%, #e5f0d8 0%, transparent 58%),
-        radial-gradient(860px 520px at 108% -6%, #f6e3cf 0%, transparent 52%),
-        radial-gradient(760px 480px at 84% 112%, #d5e6e2 0%, transparent 50%),
+        radial-gradient(900px 420px at 0% -10%, rgba(29, 78, 137, 0.09), transparent 55%),
+        radial-gradient(680px 360px at 100% 0%, rgba(227, 107, 44, 0.08), transparent 48%),
         var(--bg);
-    }
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 0;
-      background-image: radial-gradient(rgba(27, 67, 50, 0.045) 1px, transparent 1px);
-      background-size: 22px 22px;
-      mask-image: radial-gradient(circle at 50% 30%, #000 0%, transparent 82%);
     }
     button, input, select { font: inherit; color: inherit; }
     button { cursor: pointer; }
-    h1, h2, h3 { font-family: Fraunces, Georgia, serif; font-optical-sizing: auto; }
+    h1, h2, h3, .stat strong, .census-grid b { font-family: Outfit, "Source Sans 3", sans-serif; }
     p { margin: 0; }
-
+    :focus-visible { outline: 3px solid #e36b2c; outline-offset: 2px; }
     .skip {
       position: absolute;
       left: 12px;
-      top: -40px;
-      z-index: 6000;
-      background: var(--pine);
-      color: #f6f3ec;
+      top: -48px;
+      z-index: 20;
+      background: #1d4e89;
+      color: #fff;
       padding: 8px 12px;
       border-radius: 8px;
-      font-weight: 650;
+      font-weight: 700;
     }
     .skip:focus { top: 12px; }
-
     .app {
-      position: relative;
-      z-index: 1;
-      display: grid;
-      grid-template-columns: 360px minmax(0, 1fr);
-      grid-template-rows: auto minmax(340px, 1fr) 340px;
       height: 100dvh;
-      gap: 12px;
-      padding: 12px;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 8px;
+      padding: 8px;
     }
-
-    .glass {
+    .topbar, .card, .stat, .census-card, .map-toolbar, .inspector, .timeline, .legend, .map-alert {
       background: var(--card);
-      -webkit-backdrop-filter: blur(12px);
-      backdrop-filter: blur(12px);
       border: 1px solid var(--line);
-      border-radius: var(--radius);
       box-shadow: var(--shadow);
     }
-
     .topbar {
-      grid-column: 1 / -1;
       display: flex;
       align-items: center;
-      justify-content: space-between;
       gap: 16px;
-      min-height: 68px;
-      padding: 10px 14px 10px 12px;
-      animation: rise 0.55s ease both;
+      min-height: 60px;
+      padding: 8px 12px;
+      border-radius: var(--radius);
     }
     .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-    .mark {
-      width: 44px;
-      height: 44px;
-      flex: 0 0 auto;
-      display: grid;
-      place-items: center;
-      border-radius: 14px;
-      background: var(--cream);
-      border: 1px solid rgba(27, 67, 50, 0.1);
-      box-shadow: 0 8px 18px rgba(27, 67, 50, 0.08);
-    }
-    .brand h1 {
-      margin: 0;
-      font-size: 22px;
-      line-height: 1;
-      letter-spacing: -0.04em;
-      font-weight: 750;
-    }
+    .brand h1 { margin: 0; font-size: 22px; line-height: 1; letter-spacing: -0.04em; font-weight: 750; }
     .brand h1 span {
       display: block;
-      margin-top: 4px;
-      font-family: Nunito, sans-serif;
-      font-size: 12.5px;
-      font-weight: 500;
+      margin-top: 3px;
+      font-family: "Source Sans 3", sans-serif;
+      font-size: 13px;
+      font-weight: 600;
       letter-spacing: 0;
       color: var(--muted);
     }
-    .top-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
-    .chip, .pill, .clock {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
+    .nav {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 999px;
+      background: var(--chip);
+      border: 1px solid var(--line);
+    }
+    .nav button {
+      border: 0;
+      background: transparent;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .nav button[aria-current="page"] { background: #1d4e89; color: #fff; }
+    .top-meta { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .chip, .clock, .theme-toggle, .ghost, .text-btn, .presets button {
       border-radius: 999px;
       border: 1px solid var(--line);
-      background: rgba(255, 252, 246, 0.78);
+      background: var(--chip);
+      color: var(--text);
+    }
+    .chip, .clock {
+      display: inline-flex;
+      align-items: center;
       padding: 6px 10px;
       font-family: "IBM Plex Mono", ui-monospace, monospace;
-      font-size: 11px;
-      letter-spacing: 0.06em;
-      color: var(--muted);
+      font-size: 12px;
+      color: var(--text);
       white-space: nowrap;
     }
-    .chip {
-      background: #f6edd4;
-      color: #3f4a34;
-      border-color: rgba(138, 90, 16, 0.16);
-      letter-spacing: 0.04em;
-    }
-    .pill { letter-spacing: 0.12em; font-weight: 500; }
-    .pill i {
-      width: 8px;
-      height: 8px;
+    .theme-toggle, .ghost, .text-btn { padding: 7px 12px; font-weight: 700; }
+    .theme-toggle { display: inline-flex; align-items: center; gap: 8px; }
+    .theme-knob {
+      width: 18px;
+      height: 18px;
       border-radius: 50%;
-      background: currentColor;
-      box-shadow: 0 0 8px currentColor;
+      background: #1d4e89;
+      box-shadow: inset 0 0 0 4px #fff;
     }
-    .pill.ok { color: #176b3c; background: rgba(31, 138, 77, 0.12); border-color: rgba(31, 138, 77, 0.28); }
-    .pill.warn { color: var(--amber-2); background: rgba(224, 154, 43, 0.16); border-color: rgba(224, 154, 43, 0.38); }
-    .pill.crit { color: #9f2d24; background: rgba(214, 69, 61, 0.12); border-color: rgba(214, 69, 61, 0.34); }
-    .pill.crit i { animation: blink 1.15s ease-in-out infinite; }
-    .clock { color: var(--cyan-2); }
-
-    .sidebar {
-      grid-column: 1;
-      grid-row: 2 / 4;
-      min-width: 0;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      overflow: hidden;
-      animation: rise 0.6s ease 0.05s both;
-    }
-    .panel { padding: 10px 12px; }
-    .controls-panel { flex: 0 0 auto; }
-    .metrics .node-block { margin-top: 0; }
-    .kicker {
-      margin: 0 0 3px;
-      font-family: "IBM Plex Mono", ui-monospace, monospace;
-      font-size: 10px;
-      letter-spacing: 0.16em;
+    [data-theme="dark"] .theme-knob { background: #e36b2c; box-shadow: inset 0 0 0 4px #152033; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: var(--neutral);
+      color: #fff;
+      font-family: Outfit, sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--cyan);
+      line-height: 1.3;
     }
-    .panel h2 { margin: 0; font-size: 16px; letter-spacing: -0.03em; font-weight: 700; }
-    .lede { margin-top: 4px; color: var(--muted); font-size: 12.5px; line-height: 1.35; }
-    .formula {
-      margin: 8px 0 0;
-      padding: 6px 8px;
-      border-radius: 10px;
-      background: #f3f6ef;
-      border: 1px solid rgba(27, 67, 50, 0.12);
-      color: var(--cyan-2);
-      font-family: "IBM Plex Mono", ui-monospace, monospace;
-      font-size: 10.5px;
-      line-height: 1.4;
-      white-space: pre-wrap;
+    .badge i { width: 7px; height: 7px; border-radius: 50%; background: #fff; }
+    .badge.ok { background: var(--ok); }
+    .badge.warn { background: var(--warn); }
+    .badge.crit { background: var(--crit); }
+    .badge.offline { background: var(--offline); }
+    .badge.neutral { background: var(--neutral); }
+    .badge.crit i { animation: blink 1.15s ease-in-out infinite; }
+    .view { min-width: 0; min-height: 0; }
+    .view[data-view="command"] {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 12px;
     }
-    .fine { margin-top: 4px; color: var(--dim); font-size: 11px; line-height: 1.35; }
-    .fields { display: grid; gap: 8px; margin-top: 8px; }
-    .field label { display: block; margin-bottom: 4px; color: #31443a; font-size: 12px; font-weight: 650; }
-    .field input, .field select {
+    .metrics-band {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(140px, 1fr)) minmax(280px, 1.2fr);
+      gap: 12px;
+    }
+    .stat, .census-card { border-radius: var(--radius); padding: 8px 12px 10px; min-width: 0; }
+    .stat p, .census-card .kicker {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .stat strong {
+      display: block;
+      margin-top: 2px;
+      font-size: clamp(32px, 3.2vw, 42px);
+      line-height: 0.95;
+      letter-spacing: -0.045em;
+      font-weight: 750;
+      color: var(--text);
+    }
+    .sub { display: block; margin-top: 6px; color: var(--muted); font-size: 13px; font-weight: 600; }
+    .census-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+    .census-grid b { display: block; font-size: 22px; letter-spacing: -0.03em; color: var(--text); }
+    .census-grid em { font-style: normal; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .census-asof { margin-top: 8px; color: var(--muted); font-size: 12px; }
+    .census-asof a { color: var(--accent); font-weight: 700; }
+    .command {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 12px;
+    }
+    .sidebar { min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+    .valve { padding-bottom: 6px; }
+    .card { border-radius: var(--radius); padding: 8px 10px; }
+    .kicker { margin: 0 0 2px; color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+    .card h2, .panel-head h2 { margin: 0; font-size: 16px; letter-spacing: -0.03em; }
+    .lede, .fine, .valve-copy { margin-top: 4px; color: var(--muted); font-size: 13px; line-height: 1.4; }
+    .fields { display: grid; gap: 6px; margin-top: 6px; }
+    .field label { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 700; }
+    .field input, .field select, .toolbar select, .log-tools select, .crisis select, #table-filter {
       width: 100%;
       height: 36px;
       border-radius: 12px;
-      border: 1px solid rgba(27, 67, 50, 0.14);
-      background: var(--cream);
+      border: 1px solid var(--line);
+      background: var(--input);
       padding: 0 12px;
-      outline: none;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
-    .field select {
+    #table-filter { width: 240px; flex: 0 0 auto; }
+    .field select, .toolbar select, .log-tools select, .crisis select, #table-filter {
       appearance: none;
-      background-image:
-        linear-gradient(45deg, transparent 50%, var(--cyan) 50%),
-        linear-gradient(135deg, var(--cyan) 50%, transparent 50%);
-      background-position: calc(100% - 18px) 18px, calc(100% - 12px) 18px;
+      background-image: linear-gradient(45deg, transparent 50%, var(--text) 50%), linear-gradient(135deg, var(--text) 50%, transparent 50%);
+      background-position: calc(100% - 18px) 15px, calc(100% - 12px) 15px;
       background-size: 6px 6px, 6px 6px;
       background-repeat: no-repeat;
       padding-right: 32px;
     }
-    .field input:hover, .field select:hover { border-color: rgba(27, 67, 50, 0.28); }
-    .field input:focus, .field select:focus {
-      border-color: rgba(27, 67, 50, 0.72);
-      box-shadow: 0 0 0 3px rgba(27, 67, 50, 0.12);
+    .form-error:empty { display: none; }
+    .form-error {
+      margin: 8px 0 0;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: var(--crit);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
     }
-    .form-error { min-height: 1.1em; margin: 8px 0 0; color: #9f2d24; font-size: 12px; }
     .execute {
       width: 100%;
-      height: 42px;
-      margin-top: 2px;
+      height: 40px;
+      margin-top: 6px;
       border: 0;
       border-radius: 12px;
-      font-family: Nunito, sans-serif;
+      background: #1d4e89;
+      color: #fff;
       font-weight: 800;
       letter-spacing: -0.01em;
-      color: #f6f3ec;
-      background: var(--pine);
-      box-shadow: 0 10px 24px rgba(27, 67, 50, 0.22);
-      transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
     }
-    .execute:hover:not(:disabled) {
-      transform: translateY(-1px);
-      background: #245c43;
-      box-shadow: 0 14px 28px rgba(27, 67, 50, 0.28);
-    }
-    .execute:active:not(:disabled) { transform: translateY(0); }
-    .execute:disabled { cursor: progress; filter: saturate(0.7); }
-    .preset-label { margin: 8px 0 4px; color: var(--dim); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
-    .presets { display: flex; flex-wrap: wrap; gap: 6px; }
-    .presets button, .text-btn, .ghost {
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255, 252, 246, 0.72);
-      color: var(--text);
-      transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, color 0.18s ease;
-    }
-    .presets button { padding: 7px 10px; font-size: 12px; }
-    .presets button:hover, .text-btn:hover, .ghost:hover {
-      border-color: rgba(27, 67, 50, 0.32);
-      background: #e7f2e4;
-      color: var(--pine);
-    }
-    .row-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
-    .ghost, .text-btn { padding: 6px 10px; font-size: 12px; background: transparent; }
-    .node-block { margin-top: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-    .node {
-      width: 100%;
-      text-align: left;
-      display: grid;
-      grid-template-columns: 8px minmax(0, 1fr) auto;
-      grid-template-rows: auto 3px;
-      column-gap: 6px;
-      row-gap: 3px;
-      align-items: center;
-      padding: 5px 8px;
-      border-radius: 12px;
-      border: 1px solid rgba(27, 67, 50, 0.08);
-      background: rgba(255, 252, 246, 0.76);
-      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-    }
-    .node:hover { border-color: rgba(27, 67, 50, 0.32); transform: translateY(-1px); }
-    .node.flash { box-shadow: 0 0 0 1px rgba(27, 67, 50, 0.4), 0 8px 20px rgba(27, 67, 50, 0.1); }
-    .node-top { display: contents; }
-    .node-sub { display: none; }
-    .node-name {
-      font-weight: 600;
-      font-size: 12px;
-      flex: 1;
-      min-width: 0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .node-open { display: none; }
-    .node-count, .node-open { margin-left: auto; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; color: var(--muted); }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; flex: 0 0 auto; }
-    .tag {
-      font-family: "IBM Plex Mono", ui-monospace, monospace;
-      font-size: 10px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      padding: 3px 6px;
-      border-radius: 999px;
-    }
-    .tag[data-tag="General"] { color: var(--pine); background: rgba(27, 67, 50, 0.1); }
-    .tag[data-tag="Juvenile"] { color: var(--violet); background: rgba(91, 75, 134, 0.12); }
-    .tag[data-tag="Medical Rehab"] { color: #176b45; background: rgba(31, 138, 77, 0.14); }
-    .meter { grid-column: 1 / -1; display: block; height: 3px; border-radius: 99px; background: rgba(27, 67, 50, 0.08); overflow: hidden; }
-    .meter-fill { display: block; height: 100%; width: 0; border-radius: inherit; transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1), background 0.4s ease; }
-
-    .valve { transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease; }
-    .valve-copy { margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.35; }
-    .valve-stat { margin-top: 4px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; color: var(--cyan-2); }
-    .valve.hot {
-      background: #fff6e8;
-      border-color: rgba(224, 154, 43, 0.72);
-      box-shadow: 0 12px 28px rgba(224, 154, 43, 0.12);
-    }
-    .valve.hot .kicker, .valve.hot h2, .valve.hot .valve-stat { color: var(--amber-2); }
-    .valve.hot .valve-copy { color: #5c4316; }
-
-    .log-panel {
-      flex: 1 1 auto;
-      min-height: 180px;
+    .execute:hover:not(:disabled) { background: #173f70; }
+    .execute:disabled { cursor: not-allowed; opacity: 0.55; }
+    .preset-label { margin: 6px 0 4px; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    .presets { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .presets button { padding: 6px 8px; font-size: 12px; font-weight: 700; text-align: left; }
+    .row-actions, .panel-head, .log-tools, .toolbar, .timeline, .crisis-row {
       display: flex;
-      flex-direction: column;
-      padding-top: 8px;
-      padding-bottom: 10px;
-    }
-    .log-panel h2 { font-size: 14px; white-space: nowrap; }
-    .panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
-    #log {
-      flex: 1;
-      min-height: 0;
-      overflow: auto;
-      padding: 8px;
-      border-radius: 12px;
-      background: #f6f3ec;
-      border: 1px solid rgba(27, 67, 50, 0.08);
-      font-family: "IBM Plex Mono", ui-monospace, monospace;
-      font-size: 11.5px;
-      line-height: 1.45;
-    }
-    #log-empty { margin: 6px; color: var(--dim); }
-    .log-line {
-      display: grid;
-      grid-template-columns: auto auto minmax(0, 1fr);
+      align-items: center;
+      justify-content: space-between;
       gap: 8px;
-      padding: 3px 4px;
-      animation: rise 0.35s ease both;
     }
-    .log-line time, .log-line b { white-space: nowrap; }
-    .log-line time { color: var(--dim); }
-    .log-line b { font-weight: 500; }
-    .log-line span { color: #24352c; }
-    .lv-sys b, .lv-run b { color: var(--cyan-2); }
-    .lv-score b { color: #5e6f66; }
-    .lv-alloc b, .lv-ok b { color: var(--emerald); }
-    .lv-warning b { color: var(--amber-2); }
-    .lv-critical b { color: #c2412d; }
-
+    .row-actions { margin-top: 8px; }
+    .force-note {
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: #1d4e89;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .force-note button { margin-top: 6px; background: #fff; color: #152033; border-color: transparent; }
+    .crisis { border-left: 4px solid var(--warn); }
+    .crisis-row { margin-top: 8px; align-items: stretch; }
+    .crisis-row .ghost, .crisis-row .text-btn { border-radius: 12px; white-space: nowrap; }
+    .valve h2 { font-size: 15px; line-height: 1.25; }
+    .valve.hot { border-color: var(--warn); }
+    [data-theme="light"] .valve.hot { background: #fff4eb; }
+    [data-theme="dark"] .valve.hot { background: #2a140c; }
+    .map-column { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+    .map-toolbar {
+      position: absolute;
+      z-index: 500;
+      top: 12px;
+      right: 56px;
+      border-radius: 14px;
+      padding: 6px 8px;
+      box-shadow: var(--shadow);
+    }
+    .toolbar { justify-content: flex-start; }
+    .toolbar label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
+    .toolbar select { width: 240px; height: 36px; }
     .stage {
-      grid-column: 2;
-      grid-row: 2;
       position: relative;
-      min-width: 0;
+      flex: 1;
       min-height: 0;
       border-radius: var(--radius);
       overflow: hidden;
       border: 1px solid var(--line);
-      box-shadow: var(--shadow);
-      animation: rise 0.65s ease 0.08s both;
+      background: var(--map);
     }
-    #map { position: absolute; inset: 0; background: #e4ebe3; }
-    .leaflet-container { font-family: Nunito, sans-serif; background: #e4ebe3; }
-    .leaflet-tile-pane { filter: saturate(0.55) contrast(1.03); }
+    #map { position: absolute; inset: 0; background: var(--map); }
+    .leaflet-container { font-family: "Source Sans 3", sans-serif; background: var(--map); }
     .leaflet-bar { border: 0 !important; box-shadow: none !important; }
     .leaflet-bar a {
-      background: rgba(255, 252, 246, 0.94);
-      color: var(--text);
-      border: 1px solid var(--line) !important;
       width: 32px;
       height: 32px;
       line-height: 32px;
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--line) !important;
     }
-    .leaflet-bar a:hover { background: #e7f2e4; color: var(--pine); }
+    .leaflet-bottom.leaflet-right { bottom: 92px; }
     .leaflet-control-attribution {
-      background: rgba(255, 252, 246, 0.88) !important;
-      color: #5e6f66 !important;
+      background: var(--card) !important;
+      color: var(--muted) !important;
       font-size: 10px !important;
-      border-radius: 8px 0 0 0;
     }
-    .leaflet-control-attribution a { color: var(--cyan-2) !important; }
-    .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-      background: rgba(255, 252, 246, 0.98);
-      color: var(--text);
-      box-shadow: 0 16px 40px rgba(48, 72, 56, 0.16);
-    }
-    .leaflet-popup-content-wrapper {
-      border: 1px solid var(--line);
-      border-radius: 14px;
-    }
-    .leaflet-popup-content { margin: 12px 14px; }
-    .leaflet-container a.leaflet-popup-close-button { color: #516158; }
+    .leaflet-control-attribution a { color: var(--accent) !important; }
     .leaflet-tooltip.node-tip {
-      background: rgba(255, 252, 246, 0.96);
-      color: var(--text);
-      border: 1px solid rgba(27, 67, 50, 0.12);
+      background: #152033;
+      color: #f7f9fc;
+      border: 0;
       border-radius: 999px;
-      box-shadow: 0 8px 20px rgba(48, 72, 56, 0.12);
       font-family: "IBM Plex Mono", ui-monospace, monospace;
       font-size: 11px;
+      font-weight: 600;
       padding: 4px 8px;
+      box-shadow: none;
     }
     .leaflet-tooltip.node-tip::before { display: none; }
-    .pop strong {
-      display: block;
-      margin: 2px 0 8px;
-      font-family: Fraunces, Georgia, serif;
-      font-size: 15px;
+    .inspector {
+      position: absolute;
+      z-index: 500;
+      top: 12px;
+      left: 12px;
+      width: min(320px, calc(100% - 24px));
+      border-radius: 16px;
+      padding: 12px;
     }
-    .pop p { margin-top: 4px; font-size: 12px; color: var(--muted); }
-    .pop-tag {
-      font-family: "IBM Plex Mono", ui-monospace, monospace;
-      font-size: 10px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--cyan);
+    .inspector h3 { margin: 2px 0 0; font-size: 18px; letter-spacing: -0.03em; }
+    .inspector .sub { margin-top: 4px; }
+    .pop-meter, .bar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+    .pop-meter { margin: 8px 0; }
+    .pop-meter span, .bar span { display: block; height: 100%; border-radius: inherit; }
+    .inspector-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .inspector-actions button, .wave {
+      border: 0;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: #1d4e89;
+      color: #fff;
+      font-weight: 800;
     }
-    .pop-meter { height: 6px; border-radius: 99px; background: rgba(27, 67, 50, 0.08); overflow: hidden; }
-    .pop-meter span { display: block; height: 100%; }
-
-    .node-circle.is-crit { animation: blipPulse 1.15s ease-in-out infinite; }
-    .halo-wrap, .dispatch-wrap { background: transparent !important; border: none !important; }
+    .inspector-actions .ghost { background: var(--chip); color: var(--text); border: 1px solid var(--line); }
+    .map-alert {
+      position: absolute;
+      z-index: 500;
+      top: 64px;
+      right: 14px;
+      max-width: min(320px, 40%);
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: var(--crit);
+      color: #fff;
+      border-color: transparent;
+    }
+    .map-alert strong { display: block; font-family: Outfit, sans-serif; font-size: 13px; letter-spacing: 0.04em; }
+    .map-alert span { display: block; margin-top: 3px; font-size: 13px; line-height: 1.35; }
+    .legend {
+      position: absolute;
+      z-index: 500;
+      right: 12px;
+      bottom: 86px;
+      margin: 0;
+      padding: 8px 10px;
+      border-radius: 14px;
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 10px;
+      max-width: min(440px, 46%);
+    }
+    .legend li { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 650; }
+    .swatch { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .swatch.ok { background: var(--ok); }
+    .swatch.warn { background: var(--warn); }
+    .swatch.crit { background: var(--crit); }
+    .swatch.offline { background: var(--offline); }
+    .swatch.vector { width: 16px; height: 0; border-radius: 0; border-top: 2px dashed #1d4e89; }
+    [data-theme="dark"] .swatch.vector { border-top-color: #8eb6ff; }
+    .timeline {
+      position: absolute;
+      z-index: 500;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      border-radius: 14px;
+      padding: 8px 10px;
+      align-items: center;
+    }
+    .timeline button { border-radius: 999px; padding: 7px 12px; font-weight: 800; }
+    #play, #jump-live { border: 0; background: #1d4e89; color: #fff; }
+    #jump-live:disabled, #play:disabled { opacity: 0.5; cursor: default; }
+    .timeline-slider { flex: 1; min-width: 0; }
+    #hour-readout { font-size: 12px; font-weight: 700; color: var(--text); }
+    #hour-slider { width: 100%; margin: 2px 0 0; accent-color: #1d4e89; }
+    .ticks { display: flex; justify-content: space-between; color: var(--muted); font-family: "IBM Plex Mono", monospace; font-size: 10px; }
+    .halo-wrap, .dispatch-wrap { background: transparent !important; border: 0 !important; }
     .halo {
-      width: 86px;
-      height: 86px;
+      width: 78px;
+      height: 78px;
       border-radius: 50%;
-      border: 2px solid rgba(239, 68, 68, 0.9);
-      box-shadow: 0 0 18px rgba(239, 68, 68, 0.65);
+      border: 2px solid #e11d48;
       animation: halo 1.6s ease-out infinite;
     }
-    .dispatch-pin { position: relative; width: 150px; height: 28px; }
+    .dispatch-pin { position: relative; width: 148px; height: 28px; }
     .dispatch-pin i {
       position: absolute;
-      left: 6px;
+      left: 4px;
       top: 6px;
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
-      background: var(--coral);
-      box-shadow: 0 0 0 5px rgba(227, 106, 69, 0.2), 0 0 16px rgba(227, 106, 69, 0.4);
+      background: #e36b2c;
+      box-shadow: 0 0 0 4px rgba(227, 107, 44, 0.25);
     }
     .dispatch-pin em {
       position: absolute;
-      left: 30px;
-      top: 5px;
+      left: 26px;
+      top: 4px;
       font-style: normal;
-      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-family: "IBM Plex Mono", monospace;
       font-size: 10px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--pine);
-      white-space: nowrap;
-      text-shadow: 0 1px 0 #fff, 0 0 6px #fff;
-    }
-    .route-line { animation: routeFlow 1.05s linear infinite; }
-
-    .assign-card, .legend, .map-alert {
-      position: absolute;
-      z-index: 500;
-      -webkit-backdrop-filter: blur(12px);
-      backdrop-filter: blur(12px);
-    }
-    .assign-card {
-      top: 14px;
-      left: 14px;
-      width: min(280px, calc(100% - 88px));
-      padding: 12px 14px;
-      background: rgba(255, 252, 246, 0.92);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      box-shadow: var(--shadow);
-    }
-    .assign-card h3 { margin: 2px 0 0; font-size: 16px; letter-spacing: -0.03em; }
-    .assign-card p:last-child { margin-top: 6px; color: var(--muted); font-size: 12.5px; line-height: 1.4; }
-    .assign-card.hot { border-color: rgba(245, 158, 11, 0.55); }
-    .assign-card.hot .kicker { color: var(--amber-2); }
-    .legend {
-      right: 14px;
-      bottom: 22px;
-      margin: 0;
-      padding: 10px 12px;
-      list-style: none;
-      background: rgba(255, 252, 246, 0.92);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      display: grid;
-      gap: 5px;
-    }
-    .legend li { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 11.5px; }
-    .swatch { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
-    .swatch.ok { background: var(--emerald); box-shadow: 0 0 8px rgba(16, 185, 129, 0.7); }
-    .swatch.warn { background: var(--amber); box-shadow: 0 0 8px rgba(245, 158, 11, 0.6); }
-    .swatch.crit { background: var(--crimson); box-shadow: 0 0 8px rgba(239, 68, 68, 0.8); }
-    .swatch.vector { width: 16px; height: 0; border-radius: 0; background: none; border-top: 2px dashed var(--cyan-2); }
-    .map-alert {
-      top: 14px;
-      right: 58px;
-      max-width: min(340px, calc(100% - 380px));
-      padding: 10px 12px;
-      border-radius: 14px;
-      background: rgba(255, 246, 232, 0.96);
-      border: 1px solid rgba(224, 154, 43, 0.75);
-      color: #3d2a12;
-      box-shadow: 0 12px 28px rgba(138, 90, 16, 0.12);
-    }
-    .map-alert[hidden] { display: none !important; }
-    .map-alert strong { display: block; font-family: Fraunces, Georgia, serif; letter-spacing: 0.02em; font-size: 13px; color: var(--amber-2); }
-    .map-alert span { display: block; margin-top: 3px; font-size: 12px; line-height: 1.35; }
-
-    .metrics {
-      grid-column: 2;
-      grid-row: 3;
-      min-width: 0;
-      min-height: 0;
-      padding: 12px 14px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      animation: rise 0.7s ease 0.12s both;
-    }
-    .metrics-head { display: grid; grid-template-columns: minmax(160px, 220px) minmax(0, 1fr); gap: 12px; align-items: center; }
-    .kpi-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-    .kpi {
-      padding: 8px 10px;
-      border-radius: 12px;
-      background: #f6f3ec;
-      border: 1px solid rgba(27, 67, 50, 0.08);
-    }
-    .kpi em { display: block; font-style: normal; color: var(--dim); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; }
-    .kpi b { display: block; margin-top: 2px; font-family: Fraunces, Georgia, serif; font-size: 22px; letter-spacing: -0.04em; font-weight: 680; }
-    .kpi b.ok { color: var(--emerald); }
-    .kpi b.warn { color: var(--amber-2); }
-    .kpi b.crit { color: #c2412d; }
-    .kpi b.cyan { color: var(--cyan-2); }
-    .kpi b.amber { color: var(--amber-2); }
-    .metrics-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.15fr 0.95fr; gap: 12px; }
-    .chart-wrap, .trace { min-width: 0; min-height: 0; position: relative; }
-    .chart-wrap { height: 100%; display: flex; flex-direction: column; }
-    .chart-caption { margin: 0 0 4px; }
-    .chart-wrap canvas { flex: 1; min-height: 0; }
-    .metrics h2 { margin: 0; font-size: 16px; letter-spacing: -0.03em; }
-    .census-asof { margin-top: 3px; }
-    .census-asof a { color: var(--pine); font-weight: 750; }
-    .trace { display: flex; flex-direction: column; }
-    .trace-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; margin-bottom: 6px; }
-    .trace-head h3 { margin: 0; font-size: 13px; letter-spacing: -0.02em; }
-    .trace-head span, .empty-trace { color: var(--dim); font-size: 11px; }
-    .trace-scroll { overflow: auto; min-height: 0; flex: 1; }
-    table { width: 100%; border-collapse: collapse; font-size: 11.5px; font-variant-numeric: tabular-nums; }
-    th, td { padding: 5px 6px; border-bottom: 1px solid rgba(27, 67, 50, 0.08); white-space: nowrap; }
-    th {
-      position: sticky;
-      top: 0;
-      text-align: left;
-      font-size: 10px;
+      font-weight: 600;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--dim);
-      font-weight: 500;
-      background: #f7f4ee;
+      color: var(--text);
+      white-space: nowrap;
+      text-shadow: 0 0 6px var(--card), 0 0 6px var(--card);
     }
-    td.num, th.num { text-align: right; font-family: "IBM Plex Mono", ui-monospace, monospace; }
-    tr.dq td { color: #6d7c74; }
-    tr.got td.name { color: var(--pine); font-weight: 750; }
-    td.placed { color: var(--emerald); font-family: "IBM Plex Mono", ui-monospace, monospace; }
-    tr.overflow td { color: var(--amber-2); }
-    .empty-trace { padding: 8px 2px; line-height: 1.45; }
-
+    .route-line { animation: routeFlow 1.05s linear infinite; }
+    .view[data-view="facilities"] { overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+    .chart-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 12px; }
+    .chart-card { min-height: 280px; display: flex; flex-direction: column; }
+    .chart-card h2 { font-size: 16px; }
+    .chart-box { position: relative; flex: 1; min-height: 220px; }
+    #util-box { min-height: 280px; }
+    .matrix-table { width: 100%; min-width: 980px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    .matrix-table th, .matrix-table td { padding: 8px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+    .matrix-table th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--card);
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .matrix-table td.num, .matrix-table th.num { text-align: right; font-family: "IBM Plex Mono", monospace; font-size: 12px; }
+    .matrix-table tr { cursor: pointer; }
+    .matrix-table tr.selected td { background: var(--accent-soft); }
+    .facility-name { font-weight: 700; }
+    .facility-name small { display: block; color: var(--muted); font-weight: 600; }
+    .occ { display: flex; align-items: center; gap: 8px; min-width: 150px; }
+    .occ .bar { flex: 1; }
+    .tip { position: relative; display: inline-flex; align-items: center; gap: 4px; text-transform: uppercase; }
+    .info {
+      width: 18px;
+      height: 18px;
+      border: 0;
+      border-radius: 50%;
+      padding: 0;
+      background: #1d4e89;
+      color: #fff;
+      font-family: Outfit, sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .tip-box {
+      display: none;
+      position: fixed;
+      z-index: 30;
+      width: min(320px, calc(100vw - 16px));
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #152033;
+      color: #f7f9fc;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+      line-height: 1.45;
+    }
+    .tip:hover .tip-box, .tip:focus-within .tip-box { display: block; }
+    .view[data-view="audit"] { display: flex; flex-direction: column; min-height: 0; }
+    .audit-card { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .log-tools select { width: 180px; height: 36px; }
+    #log {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      background: var(--console);
+      border: 1px solid var(--line);
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 12.5px;
+      line-height: 1.5;
+    }
+    #log-empty { color: var(--muted); }
+    .log-line { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 8px; padding: 4px 2px; align-items: start; }
+    .log-line time { color: var(--muted); white-space: nowrap; }
+    .log-line span { color: var(--text); }
+    .lv-badge {
+      display: inline-flex;
+      justify-content: center;
+      min-width: 84px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      font-size: 10px;
+    }
+    .lv-sys, .lv-run, .lv-score, .lv-manual { background: #1d4e89; }
+    .lv-alloc, .lv-ok { background: #047857; }
+    .lv-warning { background: #c2410c; }
+    .lv-critical { background: #be123c; }
     .sr-only {
       position: absolute;
       width: 1px;
@@ -600,114 +572,60 @@
       clip: rect(0, 0, 0, 0);
       border: 0;
     }
-
-    .boot-error {
-      position: relative;
-      z-index: 2;
-      max-width: 640px;
-      margin: 12vh auto;
-      padding: 28px;
-    }
-    .boot-error h1 { margin: 0 0 8px; font-size: 28px; }
-    .boot-error p { color: var(--muted); line-height: 1.5; }
-
     .overlay {
       position: fixed;
       inset: 0;
-      z-index: 4000;
+      z-index: 40;
       display: grid;
       place-items: center;
-      background: rgba(231, 239, 230, 0.78);
-      -webkit-backdrop-filter: blur(8px);
-      backdrop-filter: blur(8px);
+      background: rgba(12, 18, 28, 0.46);
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.25s ease;
+      transition: opacity 0.2s ease;
     }
     .overlay.on { opacity: 1; pointer-events: auto; }
-    .overlay-card { position: relative; width: min(580px, calc(100% - 32px)); padding: 28px 28px 22px; overflow: hidden; }
-    .overlay-card h2 {
-      margin: 4px 0 0;
-      font-size: clamp(20px, 3vw, 28px);
-      letter-spacing: 0.04em;
-      line-height: 1.15;
-      color: var(--pine);
-      text-shadow: none;
-    }
-    .overlay-sub { margin-top: 8px; color: var(--muted); }
-    .scanner {
-      position: absolute;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
-      box-shadow: 0 0 16px var(--cyan);
-      animation: scan 1s linear infinite;
-    }
-    .loadbar { height: 3px; margin-top: 18px; border-radius: 99px; background: rgba(27, 67, 50, 0.1); overflow: hidden; }
-    .loadbar span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #1b4332, #7dba8a); }
-    .overlay.on .loadbar span { animation: fillbar 1s linear forwards; }
-
-    @keyframes rise {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: none; }
-    }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.35; }
-    }
-    @keyframes blipPulse {
-      0%, 100% { stroke-opacity: 1; fill-opacity: 0.45; }
-      50% { stroke-opacity: 0.35; fill-opacity: 0.1; }
-    }
-    @keyframes halo {
-      0% { transform: scale(0.45); opacity: 0.9; }
-      100% { transform: scale(1.25); opacity: 0; }
-    }
+    .overlay-card { width: min(520px, calc(100% - 32px)); padding: 26px; border-radius: 18px; position: relative; overflow: hidden; }
+    .overlay-card h2 { margin: 4px 0 0; font-size: 28px; letter-spacing: -0.03em; color: var(--text); }
+    .loadbar { height: 4px; margin-top: 16px; border-radius: 99px; background: var(--line); overflow: hidden; }
+    .loadbar span { display: block; height: 100%; width: 0; background: #1d4e89; }
+    .overlay.on .loadbar span { animation: fillbar 0.9s linear forwards; }
+    .boot-error { max-width: 640px; margin: 12vh auto; padding: 28px; border-radius: 18px; }
+    @keyframes blink { 50% { opacity: 0.35; } }
+    @keyframes halo { from { transform: scale(0.45); opacity: 0.9; } to { transform: scale(1.25); opacity: 0; } }
     @keyframes routeFlow { to { stroke-dashoffset: -36; } }
-    @keyframes scan { from { top: 0; } to { top: 100%; } }
-    @keyframes fillbar { from { width: 0; } to { width: 100%; } }
-
-    @media (max-height: 840px) {
-      .formula { display: none; }
-      .field input, .field select, .execute { height: 34px; }
-      .preset-label { margin-top: 6px; }
-      .sidebar { overflow: auto; }
-    }
+    @keyframes fillbar { to { width: 100%; } }
     @media (max-width: 1180px) {
-      .metrics-head, .metrics-body { grid-template-columns: 1fr; }
-      .map-alert { max-width: min(280px, 46vw); }
+      .metrics-band, .chart-grid { grid-template-columns: 1fr 1fr; }
+      .census-card { grid-column: 1 / -1; }
     }
     @media (max-width: 980px) {
       body { overflow: auto; }
-      .app {
-        height: auto;
-        min-height: 100dvh;
-        grid-template-columns: 1fr;
-        grid-template-rows: auto;
-      }
-      .topbar, .sidebar, .stage, .metrics { grid-column: 1; grid-row: auto; }
-      .stage { order: 2; height: 72vh; min-height: 520px; }
-      .metrics { order: 3; height: auto; }
-      .sidebar { order: 4; overflow: visible; }
-      .controls-panel, .nodes-panel { overflow: visible; }
-      .log-panel { flex: none; min-height: 280px; height: 320px; }
-      .chart-wrap { height: 230px; }
-      .trace-scroll { max-height: 240px; }
-      .brand h1 span { display: none; }
+      .app { height: auto; overflow: visible; }
+      .view[data-view="command"], .command, .map-column, .sidebar { display: flex; flex-direction: column; overflow: visible; height: auto; }
+      .stage { height: 72vh; min-height: 520px; flex: none; }
+      .view[data-view="facilities"], .view[data-view="audit"] { overflow: visible; display: flex; }
+      .audit-card { min-height: 70vh; }
+      #log { min-height: 60vh; }
     }
     @media (max-width: 720px) {
-      .kpi-row, .node-block { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .chip { display: none; }
-      .assign-card { width: calc(100% - 28px); }
-      .map-alert { left: 14px; right: 14px; top: auto; bottom: 148px; max-width: none; }
+      .topbar { flex-wrap: wrap; }
+      .nav { order: 3; width: 100%; }
+      .nav button { flex: 1; padding: 8px 6px; }
+      .chip-challenge { display: none; }
+      .metrics-band, .census-grid, .crisis-row { grid-template-columns: 1fr 1fr; display: grid; }
+      .metrics-band { grid-template-columns: 1fr; }
+      .census-card { grid-column: auto; }
+      .inspector, .map-alert, .map-toolbar { position: static; width: auto; max-width: none; margin: 8px; }
+      .stage { display: flex; flex-direction: column; height: auto; min-height: 0; }
+      #map { position: relative; height: 68vh; min-height: 460px; }
+      .legend { position: static; margin: 8px; }
+      .timeline { position: static; margin: 0 8px 8px; }
+      .leaflet-bottom.leaflet-right { bottom: 0; }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
+        animation: none !important;
+        transition: none !important;
       }
     }
   </style>
@@ -715,204 +633,304 @@
 <body>
   <a class="skip" href="#intake-form">Skip to intake controls</a>
   <div class="app" id="app">
-    <header class="topbar glass">
+    <header class="topbar">
       <div class="brand">
-        <div class="mark" aria-hidden="true">
-          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-            <path fill="#245C43" d="M16.8 18.4H28.2V28.4c0 .7-.6 1.2-1.3 1.2H16.8V18.4Z"/>
-            <path fill="#245C43" d="M16.6 18.8 23.2 11.6 29.6 18.8h-1.6l-4.8-4.9-4.8 4.9H16.6Z"/>
-            <path fill="#1B4332" d="M6 15.6h11.2V28.4c0 .7-.6 1.2-1.3 1.2H7.3c-.7 0-1.3-.5-1.3-1.2V15.6Z"/>
-            <path fill="#1B4332" d="M4.2 16.2 11.6 5.1 18.4 16.2h-1.7L11.6 8 5.9 16.2H4.2Z"/>
-            <rect x="7.3" y="17.8" width="3.1" height="2.6" rx=".45" fill="#F4F1E8"/>
-            <rect x="11.6" y="17.8" width="3.1" height="2.6" rx=".45" fill="#F4F1E8"/>
-            <rect x="21.3" y="21" width="3.1" height="2.5" rx=".45" fill="#F4F1E8"/>
-            <path fill="#E36A45" d="M9.2 23.1h4.2c.4 0 .7.3.7.7V29.4H8.5V23.8c0-.4.3-.7.7-.7Z"/>
-          </svg>
-        </div>
-        <h1>NetShelter<span>Capacity Load-Balancing Matrix</span></h1>
+        <svg class="mark" width="40" height="40" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="#152033"/>
+          <circle cx="16" cy="16" r="9.2" fill="none" stroke="#E8EEF8" stroke-width="1.6"/>
+          <circle cx="16" cy="10.1" r="1.7" fill="#E8EEF8"/>
+          <circle cx="10.6" cy="19.4" r="1.7" fill="#E8EEF8"/>
+          <circle cx="21.4" cy="19.4" r="1.7" fill="#E8EEF8"/>
+          <path d="M16 12v2.4M12.1 18.1l2.3-1.5M19.9 18.1l-2.3-1.5" fill="none" stroke="#E8EEF8" stroke-width="1.4" stroke-linecap="round"/>
+          <circle cx="16" cy="16.1" r="2.15" fill="#E36B2C"/>
+        </svg>
+        <h1>NetShelter<span>NY-11 Capacity Network</span></h1>
       </div>
+      <nav class="nav" aria-label="Primary">
+        <button type="button" data-view="command" aria-current="page">Command Center</button>
+        <button type="button" data-view="facilities">Facilities</button>
+        <button type="button" data-view="audit">Audit Trail</button>
+      </nav>
       <div class="top-meta">
-        <div class="chip">Congressional App Challenge · NY-11</div>
+        <div class="chip chip-challenge">Congressional App Challenge · NY-11</div>
         <div class="chip" id="census-chip">DHS census · loading</div>
-        <div id="status-pill" class="pill crit" role="status"><i></i><span id="status-text">CRITICAL</span></div>
+        <div id="status-pill" class="badge crit" role="status"><i></i><span id="status-text">CRITICAL</span></div>
+        <div id="preview-pill" class="badge warn" hidden>Projected</div>
+        <button type="button" class="theme-toggle" id="theme-toggle" aria-pressed="false">
+          <span class="theme-knob" aria-hidden="true"></span>
+          <span id="theme-label">Dark mode</span>
+        </button>
         <time id="clock" class="clock">--:--:-- ET</time>
       </div>
     </header>
 
-    <aside class="sidebar">
-      <section class="panel glass controls-panel">
-        <p class="kicker">Control parameters</p>
-        <h2>Intake simulation</h2>
-        <p class="lede" id="census-note">Presets are one-day rises from the NYC DHS Daily Report. The four NY-11 nodes are a planning model.</p>
-        <pre class="formula" title="Distance is haversine kilometers from entry dispatch at 40.5895, −74.1154. A node at maximum capacity is disqualified.">score = (vacancies × 0.5) + (match ? 30 : 0) − (km × 0.2)</pre>
-        <form id="intake-form" novalidate>
-          <div class="fields">
-            <div class="field">
-              <label for="intake-size">Intake size</label>
-              <input id="intake-size" name="intake" type="number" inputmode="numeric" min="1" max="5000" step="1" value="25" autocomplete="off" />
-            </div>
-            <div class="field">
-              <label for="spec">Specialization constraint</label>
-              <select id="spec" name="spec">
-                <option value="General">General</option>
-                <option value="Medical Rehab">Medical Rehab</option>
-                <option value="Juvenile">Juvenile</option>
-              </select>
-            </div>
+    <section class="view" data-view="command" id="view-command">
+      <h2 class="sr-only">Command Center</h2>
+      <div class="metrics-band">
+        <article class="stat">
+          <p>Network load</p>
+          <strong id="stat-load">—</strong>
+          <span class="sub" id="stat-load-sub">Share of beds filled</span>
+        </article>
+        <article class="stat">
+          <p>Open beds</p>
+          <strong id="stat-open">—</strong>
+          <span class="sub" id="stat-open-sub">Beds ready for intake</span>
+        </article>
+        <article class="stat">
+          <p>Critical nodes</p>
+          <strong id="stat-crit">—</strong>
+          <span class="sub" id="stat-crit-sub">Above 95% occupancy</span>
+        </article>
+        <article class="census-card">
+          <p class="kicker">NYC DHS census</p>
+          <div class="census-grid">
+            <div><b id="kpi-individuals">—</b><em>In shelter</em></div>
+            <div><b id="kpi-children">—</b><em>Children</em></div>
+            <div><b id="kpi-single">—</b><em>Single adults</em></div>
+            <div><b id="kpi-families">—</b><em>Families with children</em></div>
           </div>
-          <p id="form-error" class="form-error" role="alert"></p>
-          <button class="execute" id="execute" type="submit">Execute balance matrix</button>
-        </form>
-        <p class="preset-label">Census waves</p>
-        <div class="presets" id="presets"></div>
-        <div class="row-actions">
-          <button type="button" class="ghost" id="reset">Restore baseline</button>
-          <span class="fine" id="memory-note">Stored in this browser</span>
-        </div>
-      </section>
-
-      <section class="panel glass valve" id="valve">
-        <p class="kicker" id="valve-kicker">Overflow path</p>
-        <h2 id="valve-title">Release valve</h2>
-        <p class="valve-copy" id="valve-copy"></p>
-        <p class="valve-stat" id="valve-stat"></p>
-      </section>
-
-      <section class="panel glass log-panel" id="log-panel">
-        <div class="panel-head">
-          <h2>Live telemetry console logger</h2>
-          <button type="button" class="text-btn" id="clear-log">Clear</button>
-        </div>
-        <div id="log" role="log" aria-live="polite" aria-relevant="additions">
-          <p id="log-empty">Telemetry channel idle. Execute a run to record the matrix.</p>
-        </div>
-      </section>
-    </aside>
-
-    <section class="stage" aria-label="Facility map">
-      <h2 class="sr-only">Staten Island and NY-11 facility map</h2>
-      <div id="map" role="application" aria-label="Interactive map of NY-11 shelter nodes"></div>
-      <aside class="assign-card" id="assign-card">
-        <p class="kicker" id="assign-kicker">Primary vector</p>
-        <h3 id="assign-name">Awaiting intake</h3>
-        <p id="assign-meta">Vectors draw from entry dispatch to each node that receives people.</p>
-      </aside>
-      <div class="map-alert" id="map-alert" hidden>
-        <strong>CRITICAL OVERRIDE</strong>
-        <span id="map-alert-copy"></span>
+          <p class="census-asof" id="census-asof">Loading the shelter census…</p>
+        </article>
       </div>
-      <ul class="legend">
-        <li><i class="swatch ok"></i> Balanced · under 70%</li>
-        <li><i class="swatch warn"></i> Strained · 70–95%</li>
-        <li><i class="swatch crit"></i> Urgent · above 95%</li>
-        <li><i class="swatch vector"></i> Dispatch vector</li>
-      </ul>
+      <div class="command">
+        <aside class="sidebar">
+          <section class="card">
+            <p class="kicker">What-if desk</p>
+            <h2>Incoming intake</h2>
+            <p class="lede" id="census-note">DHS presets. Beds at each site are a planning model.</p>
+            <form id="intake-form" novalidate>
+              <div class="fields">
+                <div class="field">
+                  <label for="intake-size">Incoming Displaced Individuals</label>
+                  <input id="intake-size" name="intake" type="number" inputmode="numeric" min="1" max="5000" step="1" value="25" autocomplete="off" />
+                </div>
+                <div class="field">
+                  <label for="spec">Required Care Specialization</label>
+                  <select id="spec" name="spec">
+                    <option value="General">General Shelter</option>
+                    <option value="Medical">Medical Focus</option>
+                    <option value="Youth">Youth Care</option>
+                  </select>
+                </div>
+              </div>
+              <p id="form-error" class="form-error" role="alert"></p>
+              <button class="execute" id="execute" type="submit">Approve &amp; Reroute Intake</button>
+              <p class="fine" id="approve-note" hidden>This hour is a projection. Return to the live hour before approving a reroute.</p>
+            </form>
+            <p class="preset-label">Census waves</p>
+            <div class="presets" id="presets"></div>
+            <div id="force-note" class="force-note" hidden></div>
+            <div class="row-actions">
+              <button type="button" class="ghost" id="reset" data-lock="1">Restore baseline</button>
+            </div>
+          </section>
+          <section class="card crisis">
+            <p class="kicker">Crisis controls</p>
+            <h2 class="sr-only">Simulation spikes</h2>
+            <div class="fields">
+              <div class="field">
+                <label for="crash-node">Facility</label>
+                <select id="crash-node"></select>
+              </div>
+            </div>
+            <div class="crisis-row">
+              <button type="button" class="ghost" id="crash-btn" data-lock="1">Crash capacity to 0</button>
+              <button type="button" class="wave" id="wave-btn" data-lock="1" title="Simulate an unexpected intake of 120 people">Wave of 120</button>
+            </div>
+          </section>
+          <section class="card valve" id="valve">
+            <div class="row-actions">
+              <p class="kicker" id="valve-kicker">Failsafe</p>
+              <span id="valve-badge" class="badge warn" hidden>Rerouting</span>
+            </div>
+            <h2 id="valve-title">Automatic Network Rerouting</h2>
+            <p class="valve-copy" id="valve-copy"></p>
+            <p class="fine" id="valve-stat"></p>
+          </section>
+        </aside>
+        <div class="map-column">
+          <section class="stage" aria-label="Facility map">
+            <h2 class="sr-only">Map of the NY-11 shelter network and regional catchments</h2>
+            <div class="map-toolbar">
+              <div class="toolbar">
+                <label for="map-filter">Show
+                  <select id="map-filter">
+                    <option value="all">All facilities</option>
+                    <option value="General">General shelters</option>
+                    <option value="Medical">Medical focus</option>
+                    <option value="Youth">Youth care</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+            <div id="map" role="application" aria-label="Interactive map of shelter facilities"></div>
+            <aside class="inspector" id="inspector"></aside>
+            <div class="map-alert" id="map-alert" hidden>
+              <strong>FAILSAFE ACTIVE</strong>
+              <span id="map-alert-copy"></span>
+            </div>
+            <ul class="legend">
+              <li><i class="swatch ok"></i> Balanced · under 70%</li>
+              <li><i class="swatch warn"></i> Strained · 70–95%</li>
+              <li><i class="swatch crit"></i> Critical · above 95%</li>
+              <li><i class="swatch offline"></i> Offline · capacity 0</li>
+              <li><i class="swatch vector"></i> Dispatch route</li>
+            </ul>
+            <div class="timeline">
+              <button type="button" id="play" aria-pressed="false">Play</button>
+              <div class="timeline-slider">
+                <div id="hour-readout">Live</div>
+                <input id="hour-slider" type="range" min="0" max="23" step="1" value="12" aria-label="24-hour load timeline" />
+                <div class="ticks" aria-hidden="true"><span>12a</span><span>6a</span><span>12p</span><span>6p</span><span>11p</span></div>
+              </div>
+              <button type="button" id="jump-live">Live</button>
+            </div>
+          </section>
+        </div>
+      </div>
     </section>
 
-    <section class="metrics glass">
-      <div class="metrics-head">
+    <section class="view" data-view="facilities" id="view-facilities" hidden>
+      <div class="card panel-head">
         <div>
-          <p class="kicker">NYC Open Data</p>
-          <h2>DHS daily census</h2>
-          <p class="fine census-asof" id="census-asof">Loading the shelter census…</p>
+          <p class="kicker">Deep dive</p>
+          <h2>Facility matrix</h2>
+          <p class="lede" id="matrix-note"></p>
         </div>
-        <div class="kpi-row">
-          <div class="kpi"><em>In shelter</em><b id="kpi-individuals" class="cyan">—</b></div>
-          <div class="kpi"><em>Children</em><b id="kpi-children">—</b></div>
-          <div class="kpi"><em>Single adults</em><b id="kpi-single">—</b></div>
-          <div class="kpi"><em>Families w/ kids</em><b id="kpi-families">—</b></div>
-        </div>
+        <label class="sr-only" for="table-filter">Filter facilities</label>
+        <select id="table-filter">
+          <option value="all">Show all facilities</option>
+          <option value="General">General shelters</option>
+          <option value="Medical">Medical focus</option>
+          <option value="Youth">Youth care</option>
+        </select>
       </div>
-      <div class="node-block" id="node-list" aria-label="Facility nodes"></div>
-      <div class="metrics-body">
-        <div class="chart-wrap">
-          <p class="fine chart-caption">Day-to-day change in the DHS census. Green is a rise, coral is a decline. Click a rise to load it.</p>
-          <canvas id="capacity-chart" aria-label="Bar chart of the day-to-day change in the NYC DHS shelter census"></canvas>
-        </div>
-        <div class="trace">
-          <div class="trace-head">
-            <h3>Score matrix</h3>
-            <span id="trace-when">No run yet</span>
-          </div>
-          <div class="trace-scroll" id="trace-body">
-            <p class="empty-trace">Run an intake to see vacancies, match, distance, score, and where each person was placed.</p>
-          </div>
-        </div>
+      <div class="chart-grid">
+        <article class="card chart-card">
+          <h2>Occupancy by facility</h2>
+          <p class="fine">Filtered with the care selector. Click a bar to open that facility on the map.</p>
+          <div class="chart-box" id="util-box"><canvas id="util-chart" aria-label="Facility occupancy percentages"></canvas></div>
+        </article>
+        <article class="card chart-card">
+          <h2>Census day-to-day change</h2>
+          <p class="fine">Green is a rise and rose is a decline. Click a rise to load that count.</p>
+          <div class="chart-box"><canvas id="capacity-chart" aria-label="Day-to-day change in the NYC DHS shelter census"></canvas></div>
+        </article>
       </div>
+      <article class="card table-card">
+        <div class="table-scroll" id="trace-body"></div>
+      </article>
+    </section>
+
+    <section class="view" data-view="audit" id="view-audit" hidden>
+      <article class="card audit-card">
+        <div class="panel-head">
+          <div>
+            <p class="kicker">System record</p>
+            <h2>Audit trail</h2>
+            <p class="lede" id="log-count">Events in the order they happened.</p>
+          </div>
+          <div class="log-tools">
+            <label class="sr-only" for="log-filter">Filter events</label>
+            <select id="log-filter">
+              <option value="all">All events</option>
+              <option value="place">Placements</option>
+              <option value="alert">Warnings</option>
+            </select>
+            <button type="button" class="text-btn" id="clear-log" data-lock="1">Clear</button>
+          </div>
+        </div>
+        <div id="log" role="log" aria-live="polite" aria-relevant="additions"></div>
+      </article>
     </section>
   </div>
 
   <div id="overlay" class="overlay" aria-hidden="true">
-    <div class="overlay-card glass" role="status" aria-live="polite">
-      <div class="scanner" aria-hidden="true"></div>
-      <p class="kicker">NY-11 system balance</p>
-      <h2>COMPUTING SYSTEM BALANCE MATRIX...</h2>
-      <p class="overlay-sub">Vacancies, specialization match, and dispatch distance</p>
+    <div class="overlay-card card" role="status" aria-live="polite">
+      <p class="kicker">NY-11 placement</p>
+      <h2>Approving the reroute</h2>
+      <p class="lede">Checking available beds, care requirements, and distance from dispatch.</p>
       <div class="loadbar" aria-hidden="true"><span></span></div>
     </div>
   </div>
 
   <script>
     (function () {
-      const STORAGE_KEY = 'netshelter.ny11.v1';
-      const SPECS = ['General', 'Medical Rehab', 'Juvenile'];
-      const STATUS_COLOR = { ok: '#1f8a4d', warn: '#e09a2b', crit: '#d6453d' };
+      const STORAGE_KEY = 'netshelter.ny11.v2';
+      const THEME_KEY = 'netshelter.theme';
+      const SPECS = ['General', 'Medical', 'Youth'];
+      const SPEC_LABEL = { General: 'General Shelter', Medical: 'Medical Focus', Youth: 'Youth Care' };
+      const STATUS_COLOR = { ok: '#047857', warn: '#c2410c', crit: '#be123c', offline: '#64748b' };
+      const STATUS_LABEL = { ok: 'Balanced', warn: 'Strained', crit: 'Critical', offline: 'Offline' };
       const DISPATCH = { lat: 40.5895, lng: -74.1154, name: 'NY-11 Entry Dispatch' };
-      const MAP_CENTER = [40.5795, -74.1154];
-      const BASELINE = [
-        { id: 'st-george', name: 'St. George Intake Hub', short: 'St. George', lat: 40.6445, lng: -74.0805, max: 100, current: 96, tag: 'General' },
-        { id: 'south-shore', name: 'South Shore Safe-Haven', short: 'South Shore', lat: 40.5242, lng: -74.2045, max: 50, current: 44, tag: 'Juvenile' },
-        { id: 'new-dorp', name: 'New Dorp Rehab Point', short: 'New Dorp', lat: 40.5735, lng: -74.1112, max: 30, current: 28, tag: 'Medical Rehab' },
-        { id: 'bay-ridge', name: 'Bay Ridge Transit Point', short: 'Bay Ridge', lat: 40.6254, lng: -74.0298, max: 120, current: 102, tag: 'General' }
+      const DIURNAL = [1.16, 1.18, 1.18, 1.16, 1.12, 1.06, 0.98, 0.90, 0.84, 0.78, 0.76, 0.76, 0.78, 0.82, 0.86, 0.92, 0.98, 1.04, 1.08, 1.12, 1.16, 1.18, 1.18, 1.16];
+      const FACILITIES = [
+        { id: 'bay-ridge', name: 'Bay Ridge Transit Point', short: 'Bay Ridge', borough: 'Brooklyn', kind: 'Transit', tag: 'General', lat: 40.6254, lng: -74.0298, max: 328, current: 318 },
+        { id: 'north-shore', name: 'Staten Island North Shore Congregate', short: 'North Shore', borough: 'Staten Island', kind: 'Single adult', tag: 'General', lat: 40.6432, lng: -74.0772, max: 540, current: 448 },
+        { id: 'south-brooklyn', name: 'South Brooklyn Regional Residence', short: 'S. Brooklyn', borough: 'Brooklyn', kind: 'Family', tag: 'General', lat: 40.648, lng: -74.0045, max: 390, current: 330 },
+        { id: 'dyker', name: 'Dyker Heights Emergency Center', short: 'Dyker Heights', borough: 'Brooklyn', kind: 'Single adult', tag: 'General', lat: 40.6188, lng: -74.0115, max: 420, current: 360 },
+        { id: 'bensonhurst', name: 'Bensonhurst Family Oasis', short: 'Bensonhurst', borough: 'Brooklyn', kind: 'Family', tag: 'General', lat: 40.6038, lng: -73.9935, max: 310, current: 200 },
+        { id: 'midwood', name: 'Midwood Transit Hub', short: 'Midwood', borough: 'Brooklyn', kind: 'Transit', tag: 'General', lat: 40.6195, lng: -73.9592, max: 220, current: 150 },
+        { id: 'stapleton', name: 'Stapleton Community Shelter', short: 'Stapleton', borough: 'Staten Island', kind: 'Single adult', tag: 'General', lat: 40.6268, lng: -74.0775, max: 460, current: 400 },
+        { id: 'new-dorp-family', name: 'New Dorp Family Annex', short: 'New Dorp', borough: 'Staten Island', kind: 'Family', tag: 'General', lat: 40.5736, lng: -74.1168, max: 280, current: 150 },
+        { id: 'south-shore', name: 'South Shore Safe-Haven', short: 'South Shore', borough: 'Staten Island', kind: 'Youth care', tag: 'Youth', lat: 40.5242, lng: -74.2045, max: 190, current: 118 },
+        { id: 'new-dorp-medical', name: 'New Dorp Medical Rehab', short: 'New Dorp Rehab', borough: 'Staten Island', kind: 'Medical', tag: 'Medical', lat: 40.5688, lng: -74.1048, max: 150, current: 146 },
+        { id: 'flushing', name: 'Flushing Meadows Transit Hub', short: 'Flushing', borough: 'Queens', kind: 'Transit', tag: 'General', lat: 40.7401, lng: -73.8407, max: 410, current: 370 },
+        { id: 'astoria', name: 'Astoria Resource Center', short: 'Astoria', borough: 'Queens', kind: 'Medical', tag: 'Medical', lat: 40.7644, lng: -73.9235, max: 260, current: 200 },
+        { id: 'downtown-bk', name: 'Downtown Brooklyn Intake', short: 'Dtwn Brooklyn', borough: 'Brooklyn', kind: 'Transit', tag: 'General', lat: 40.693, lng: -73.9872, max: 470, current: 400 },
+        { id: 'coney', name: 'Coney Island Relief Station', short: 'Coney Island', borough: 'Brooklyn', kind: 'Youth care', tag: 'Youth', lat: 40.5749, lng: -73.9858, max: 230, current: 148 },
+        { id: 'penn', name: 'Penn Station Transit Point', short: 'Penn Station', borough: 'Manhattan', kind: 'Transit', tag: 'General', lat: 40.7506, lng: -73.9935, max: 520, current: 498 },
+        { id: 'harlem', name: 'Harlem Community Hub', short: 'Harlem', borough: 'Manhattan', kind: 'Single adult', tag: 'General', lat: 40.8116, lng: -73.9465, max: 350, current: 314 },
+        { id: 'south-bronx', name: 'South Bronx Relief Station', short: 'South Bronx', borough: 'Bronx', kind: 'Medical', tag: 'Medical', lat: 40.8168, lng: -73.919, max: 380, current: 340 },
+        { id: 'jamaica', name: 'Jamaica Station Hub', short: 'Jamaica', borough: 'Queens', kind: 'Transit', tag: 'General', lat: 40.6996, lng: -73.807, max: 360, current: 320 },
+        { id: 'wadsworth', name: 'Fort Wadsworth Reception', short: 'Ft. Wadsworth', borough: 'Staten Island', kind: 'Transit', tag: 'General', lat: 40.6042, lng: -74.0568, max: 250, current: 190 },
+        { id: 'newark', name: 'Newark Penn Transit Point', short: 'Newark Penn', borough: 'New Jersey', kind: 'Transit', tag: 'General', lat: 40.7347, lng: -74.1646, max: 300, current: 270 },
+        { id: 'elizabeth', name: 'Elizabeth Border Catchment', short: 'Elizabeth', borough: 'New Jersey', kind: 'Transit', tag: 'General', lat: 40.7188, lng: -74.1975, max: 270, current: 242 }
       ];
       const DHS_URL = 'https://data.cityofnewyork.us/resource/k46n-sa2m.json?$select=date_of_census,total_individuals_in_shelter,total_adults_in_shelter,total_children_in_shelter,total_single_adults_in_shelter,families_with_children_in_shelter,total_individuals_in_families_with_children_in_shelter_,individuals_in_adult_families_in_shelter&$order=date_of_census%20DESC&$limit=42';
       const DHS_PAGE = 'https://data.cityofnewyork.us/Social-Services/DHS-Daily-Report/k46n-sa2m';
-      // Saved NYC Open Data snapshot, newest census first. Live responses replace it.
-      // Tuple: date, individuals, adults, children, single adults, families with children, people in those families, people in adult families.
       const CENSUS_FALLBACK = [["2026-10-24",83811,55815,27996,27087,16349,51623,5101],["2026-10-23",83829,55845,27984,27171,16327,51568,5090],["2026-10-22",83766,55798,27968,27159,16304,51526,5081],["2026-10-21",83682,55795,27887,27211,16260,51396,5075],["2026-10-20",83814,55822,27992,27122,16332,51608,5084],["2026-10-19",84224,56038,28186,27163,16440,51937,5124],["2026-10-18",84075,55919,28156,27070,16410,51869,5136],["2026-10-17",83976,55845,28131,27032,16382,51804,5140],["2026-10-16",83886,55805,28081,27008,16369,51750,5128],["2026-10-15",83781,55721,28060,26936,16358,51707,5138],["2026-10-14",84037,55880,28157,26983,16422,51901,5153],["2026-10-13",84106,55918,28188,27017,16426,51936,5153],["2026-10-12",84172,55946,28226,27045,16427,51980,5147],["2026-10-11",83936,55803,28133,26984,16379,51818,5134],["2026-10-10",83980,55767,28213,26889,16423,51960,5131],["2026-10-09",83921,55735,28186,26878,16393,51905,5138],["2026-10-08",84042,55853,28189,27010,16375,51879,5153],["2026-10-07",84178,55964,28214,27064,16399,51957,5157],["2026-10-06",84266,55986,28280,27042,16431,52065,5159],["2026-10-05",84379,56062,28317,27064,16482,52178,5137],["2026-10-04",84331,56014,28317,27005,16478,52172,5154],["2026-10-03",84108,55816,28292,26833,16464,52124,5151],["2026-10-02",84095,55864,28231,26932,16427,52017,5146],["2026-10-01",83920,55783,28137,26909,16371,51866,5145],["2026-09-30",84052,55935,28117,27054,16372,51863,5135],["2026-09-29",83944,55811,28133,26953,16371,51869,5122],["2026-09-28",84374,56032,28342,26895,16518,52294,5185],["2026-09-27",84271,55960,28311,26864,16500,52241,5166],["2026-09-26",84119,55883,28236,26831,16457,52111,5177],["2026-09-25",84110,55911,28199,26903,16422,52034,5173],["2026-09-24",83970,55843,28127,26898,16378,51890,5182],["2026-09-23",83879,55767,28112,26841,16360,51866,5172],["2026-09-22",83823,55721,28102,26805,16363,51858,5160],["2026-09-21",84147,55863,28284,26783,16467,52197,5167],["2026-09-20",83949,55697,28252,26644,16451,52156,5149],["2026-09-19",83939,55677,28262,26606,16447,52175,5158],["2026-09-18",83792,55609,28183,26594,16411,52043,5155],["2026-09-17",83895,55699,28196,26662,16411,52071,5162],["2026-09-16",83906,55710,28196,26638,16423,52091,5177],["2026-09-15",83761,55626,28135,26593,16396,51997,5171],["2026-09-14",83941,55712,28229,26560,16460,52196,5185],["2026-09-13",83855,55644,28211,26503,16447,52160,5192]];
 
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const countFormat = new Intl.NumberFormat('en-US');
+      const $ = (id) => document.getElementById(id);
 
       const state = {
-        nodes: BASELINE.map((node) => ({ ...node, baseline: node.current })),
+        nodes: FACILITIES.map((node, index) => ({ ...node, baseline: node.current, crashed: false, shift: index % 5 })),
         logs: [],
+        logFilter: 'all',
         valve: { active: false, lastOverflow: 0, totalRouted: 0, lastIntake: 0, lastSpec: 'General' },
         trace: null,
         running: false,
         censusRows: [],
         censusDeltas: [],
         censusSource: 'cache',
-        intakeTouched: false
+        intakeTouched: false,
+        view: 'command',
+        filter: 'all',
+        selectedId: null,
+        forcedId: null,
+        previewHour: 12
       };
 
-      const $ = (id) => document.getElementById(id);
       const intakeInput = $('intake-size');
       const specSelect = $('spec');
       const formError = $('form-error');
       const executeBtn = $('execute');
       const overlay = $('overlay');
       const logEl = $('log');
-      const nodeList = $('node-list');
-      const valveEl = $('valve');
-      const valveKicker = $('valve-kicker');
-      const valveTitle = $('valve-title');
-      const valveCopy = $('valve-copy');
-      const valveStat = $('valve-stat');
-      const assignCard = $('assign-card');
-      const assignKicker = $('assign-kicker');
-      const assignName = $('assign-name');
-      const assignMeta = $('assign-meta');
-      const mapAlert = $('map-alert');
-      const mapAlertCopy = $('map-alert-copy');
-      const traceBody = $('trace-body');
-      const traceWhen = $('trace-when');
-      const statusPill = $('status-pill');
-      const statusText = $('status-text');
-      const clockEl = $('clock');
-
+      const slider = $('hour-slider');
       let map;
-      let chart;
+      let baseTiles;
+      let labelTiles;
       let routeLayer;
+      let chart;
+      let utilChart;
+      let chartsReady = false;
+      let sliderLocked = false;
+      let playTimer = null;
+      let frameRows = [];
 
       function haversineKm(a, b) {
         const R = 6371;
@@ -924,28 +942,88 @@
         return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
       }
 
-      function statusOf(node) {
-        const ratio = node.current / node.max;
+      function statusOf(node, current) {
+        const occupied = current == null ? node.current : current;
+        if (node.crashed) return 'offline';
+        const ratio = node.max ? occupied / node.max : 1;
         if (ratio > 0.95) return 'crit';
         if (ratio >= 0.7) return 'warn';
         return 'ok';
       }
 
+      function etHour(date = new Date()) {
+        const part = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          hour: 'numeric',
+          hourCycle: 'h23'
+        }).formatToParts(date).find((item) => item.type === 'hour');
+        return Number(part ? part.value : 0) % 24;
+      }
+
+      function formatHour(hour) {
+        const suffix = hour < 12 ? 'AM' : 'PM';
+        const hr = hour % 12 || 12;
+        return hr + ':00 ' + suffix;
+      }
+
+      function isPreview() {
+        return state.previewHour !== etHour();
+      }
+
+      function diurnal(node, hour) {
+        return DIURNAL[(hour + (node.shift || 0)) % 24];
+      }
+
+      function shownCurrent(node) {
+        if (node.crashed) return 0;
+        if (!isPreview()) return node.current;
+        const nowFactor = diurnal(node, etHour());
+        const factor = diurnal(node, state.previewHour);
+        if (!nowFactor) return node.current;
+        return Math.max(0, Math.min(node.max, Math.round(node.current * factor / nowFactor)));
+      }
+
+      function currentSpec() {
+        return SPECS.includes(specSelect.value) ? specSelect.value : 'General';
+      }
+
+      function passesFilter(node) {
+        return state.filter === 'all' || node.tag === state.filter;
+      }
+
+      function previewNodes() {
+        return state.nodes.map((node) => ({
+          id: node.id,
+          name: node.name,
+          short: node.short,
+          borough: node.borough,
+          kind: node.kind,
+          tag: node.tag,
+          lat: node.lat,
+          lng: node.lng,
+          max: node.max,
+          current: shownCurrent(node),
+          crashed: node.crashed
+        }));
+      }
+
       function networkSnapshot() {
-        const max = state.nodes.reduce((sum, node) => sum + node.max, 0);
-        const current = state.nodes.reduce((sum, node) => sum + node.current, 0);
-        const open = state.nodes.reduce((sum, node) => sum + Math.max(0, node.max - node.current), 0);
-        const critical = state.nodes.filter((node) => statusOf(node) === 'crit').length;
-        const worst = critical ? 'crit' : state.nodes.some((node) => statusOf(node) === 'warn') ? 'warn' : 'ok';
+        const active = state.nodes.filter((node) => !node.crashed);
+        if (!active.length) return { max: 0, current: 0, open: 0, critical: 0, worst: 'offline', load: 0 };
+        const max = active.reduce((sum, node) => sum + node.max, 0);
+        const current = active.reduce((sum, node) => sum + shownCurrent(node), 0);
+        const open = active.reduce((sum, node) => sum + Math.max(0, node.max - shownCurrent(node)), 0);
+        const critical = active.filter((node) => statusOf(node, shownCurrent(node)) === 'crit').length;
+        const worst = critical ? 'crit' : active.some((node) => statusOf(node, shownCurrent(node)) === 'warn') ? 'warn' : 'ok';
         return { max, current, open, critical, worst, load: max ? (current / max) * 100 : 0 };
       }
 
-      function planAllocation(nodes, intake, spec) {
+      function planAllocation(nodes, intake, spec, forcedId) {
         const rows = nodes.map((node) => {
-          const vacancies = Math.max(0, node.max - node.current);
+          const vacancies = node.crashed ? 0 : Math.max(0, node.max - node.current);
           const distanceKm = haversineKm(DISPATCH, node);
           const match = node.tag === spec;
-          const disqualified = vacancies <= 0 || node.current >= node.max;
+          const disqualified = Boolean(node.crashed) || vacancies <= 0;
           const score = disqualified
             ? Number.NEGATIVE_INFINITY
             : vacancies * 0.5 + (match ? 30 : 0) - distanceKm * 0.2;
@@ -953,34 +1031,47 @@
             id: node.id,
             name: node.name,
             short: node.short,
+            borough: node.borough,
+            kind: node.kind,
             tag: node.tag,
             vacancies,
             distanceKm,
             match,
             disqualified,
+            crashed: Boolean(node.crashed),
             score,
             allocated: 0,
+            forced: false,
             before: node.current,
             max: node.max
           };
         });
-
         rows.sort((a, b) => {
           if (a.disqualified !== b.disqualified) return a.disqualified ? 1 : -1;
           if (b.score !== a.score) return b.score - a.score;
           if (a.distanceKm !== b.distanceKm) return a.distanceKm - b.distanceKm;
           return a.name.localeCompare(b.name);
         });
-
         let remaining = intake;
+        let forcedSkipped = false;
+        if (forcedId) {
+          const forced = rows.find((row) => row.id === forcedId);
+          if (forced && !forced.disqualified) {
+            const take = Math.min(remaining, forced.vacancies);
+            forced.allocated = take;
+            forced.forced = take > 0;
+            remaining -= take;
+          } else if (forced) {
+            forcedSkipped = true;
+          }
+        }
         rows.forEach((row) => {
-          if (remaining <= 0 || row.disqualified) return;
+          if (remaining <= 0 || row.disqualified || row.allocated) return;
           const take = Math.min(remaining, row.vacancies);
           row.allocated = take;
           remaining -= take;
         });
-
-        return { rows, overflow: remaining };
+        return { rows, overflow: remaining, forcedSkipped };
       }
 
       function stamp(date = new Date()) {
@@ -993,17 +1084,30 @@
         }).format(date);
       }
 
+      function makeEntry(level, label, message) {
+        const now = new Date();
+        return { level, label, message, stamp: stamp(now), iso: now.toISOString() };
+      }
+
       function loadMemory() {
         try {
           const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-          if (!raw || raw.v !== 1) return;
+          if (!raw || raw.v !== 2) return;
+          const known = new Set(state.nodes.map((node) => node.id));
           state.nodes.forEach((node) => {
             const saved = raw.currents && raw.currents[node.id];
             if (typeof saved === 'number' && Number.isFinite(saved)) {
               node.current = Math.max(0, Math.min(node.max, Math.round(saved)));
             }
           });
-          if (Array.isArray(raw.logs)) state.logs = raw.logs.slice(-100);
+          if (Array.isArray(raw.crashed)) {
+            raw.crashed.forEach((id) => {
+              const node = state.nodes.find((item) => item.id === id);
+              if (node) node.crashed = true;
+            });
+          }
+          if (known.has(raw.forcedId)) state.forcedId = raw.forcedId;
+          if (Array.isArray(raw.logs)) state.logs = raw.logs.slice(-200);
           if (raw.valve && typeof raw.valve === 'object') {
             state.valve = {
               active: Boolean(raw.valve.active),
@@ -1015,23 +1119,21 @@
           }
           if (raw.trace && Array.isArray(raw.trace.rows)) state.trace = raw.trace;
         } catch (err) {
-          /* Memory is optional. A corrupt frame falls back to baseline. */
+          /* A corrupt save falls back to the opening network. */
         }
       }
 
       function saveMemory() {
         const payload = {
-          v: 1,
+          v: 2,
           currents: Object.fromEntries(state.nodes.map((node) => [node.id, node.current])),
-          logs: state.logs.slice(-100),
+          crashed: state.nodes.filter((node) => node.crashed).map((node) => node.id),
+          forcedId: state.forcedId,
+          logs: state.logs.slice(-200),
           valve: state.valve,
           trace: state.trace
         };
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-        } catch (err) {
-          /* Private mode can reject storage. The live session still runs. */
-        }
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); } catch (err) { /* Private mode can reject storage. */ }
       }
 
       function showError(message) {
@@ -1042,22 +1144,30 @@
         const raw = intakeInput.value.trim();
         if (!/^\d+$/.test(raw)) return { error: 'Enter a whole number of people.' };
         const intake = Number(raw);
-        if (intake < 1) return { error: 'Intake has to be at least 1 person.' };
-        if (intake > 5000) return { error: 'This desk simulates waves up to 5,000 people.' };
+        if (intake < 1) return { error: 'At least 1 person is required.' };
+        if (intake > 5000) return { error: 'This desk routes waves up to 5,000 people.' };
         const spec = specSelect.value;
-        if (!SPECS.includes(spec)) return { error: 'Choose a specialization constraint.' };
+        if (!SPECS.includes(spec)) return { error: 'Choose a required care specialization.' };
+        if (isPreview()) return { error: 'This hour is a projection. Return to the live hour before approving a reroute.' };
         return { intake, spec };
+      }
+
+      function logVisible(entry) {
+        if (state.logFilter === 'place') return ['run', 'alloc', 'ok', 'manual'].includes(entry.level);
+        if (state.logFilter === 'alert') return entry.level === 'warning' || entry.level === 'critical';
+        return true;
       }
 
       function paintLog(entry) {
         const empty = $('log-empty');
         if (empty) empty.remove();
         const row = document.createElement('div');
-        row.className = 'log-line lv-' + entry.level;
+        row.className = 'log-line';
         const time = document.createElement('time');
         time.dateTime = entry.iso || '';
-        time.textContent = '[' + entry.stamp + ']';
+        time.textContent = entry.stamp;
         const level = document.createElement('b');
+        level.className = 'lv-badge lv-' + entry.level;
         level.textContent = entry.label;
         const message = document.createElement('span');
         message.textContent = entry.message;
@@ -1066,73 +1176,168 @@
         logEl.scrollTop = logEl.scrollHeight;
       }
 
-      function pushLogs(entries, persist) {
-        entries.forEach((entry) => {
-          if (persist) state.logs.push(entry);
-          paintLog(entry);
-        });
-        if (persist && state.logs.length > 100) state.logs.splice(0, state.logs.length - 100);
+      function paintAllLogs() {
+        logEl.replaceChildren();
+        const rows = state.logs.filter(logVisible);
+        if (!rows.length) {
+          const empty = document.createElement('p');
+          empty.id = 'log-empty';
+          empty.textContent = state.logs.length
+            ? 'Nothing in this filter.'
+            : 'No events yet. Approve a reroute to start the record.';
+          logEl.appendChild(empty);
+        } else {
+          rows.forEach(paintLog);
+        }
+        $('log-count').textContent = countFormat.format(state.logs.length) + (state.logs.length === 1 ? ' event' : ' events') + ' · oldest first';
       }
 
-      function makeEntry(level, label, message) {
-        const now = new Date();
-        return { level, label, message, stamp: stamp(now), iso: now.toISOString() };
+      function pushLogs(entries, persist) {
+        entries.forEach((entry) => {
+          state.logs.push(entry);
+          if (logVisible(entry)) paintLog(entry);
+        });
+        if (state.logs.length > 200) state.logs.splice(0, state.logs.length - 200);
+        $('log-count').textContent = countFormat.format(state.logs.length) + (state.logs.length === 1 ? ' event' : ' events') + ' · oldest first';
+        if (persist) saveMemory();
       }
 
       function escapeHtml(value) {
-        return String(value).replace(/[&<>"']/g, (ch) => ({
-          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-        }[ch]));
+        return String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
       }
 
-      function popupHtml(node) {
-        const status = statusOf(node);
-        const label = status === 'crit' ? 'Above 95% · urgent' : status === 'warn' ? '70–95% · strained' : 'Under 70% · balanced';
-        const open = Math.max(0, node.max - node.current);
-        const km = haversineKm(DISPATCH, node);
-        const placed = state.trace && state.trace.rows.find((row) => row.id === node.id);
-        const placedLine = placed && placed.allocated > 0
-          ? '<p>Last wave placed ' + placed.allocated + ' here.</p>'
-          : '';
-        return (
-          '<div class="pop">' +
-            '<div class="pop-tag">' + escapeHtml(node.tag) + '</div>' +
-            '<strong>' + escapeHtml(node.name) + '</strong>' +
-            '<div class="pop-meter"><span style="width:' + Math.round((node.current / node.max) * 100) + '%;background:' + STATUS_COLOR[status] + '"></span></div>' +
-            '<p>' + node.current + ' / ' + node.max + ' beds · ' + open + ' open</p>' +
-            '<p>' + km.toFixed(2) + ' km from entry dispatch</p>' +
-            '<p>' + label + '</p>' +
-            placedLine +
-          '</div>'
-        );
+      function tweenNumber(el, to, format) {
+        const from = Number(el.dataset.val || '0');
+        el.dataset.val = String(to);
+        if (reduceMotion || from === to) {
+          el.textContent = format(to);
+          return;
+        }
+        const token = String(performance.now());
+        el.dataset.tween = token;
+        const start = performance.now();
+        const step = (now) => {
+          if (el.dataset.tween !== token) return;
+          const t = Math.min(1, (now - start) / 500);
+          const eased = 1 - (1 - t) ** 3;
+          el.textContent = format(Math.round(from + (to - from) * eased));
+          if (t < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      }
+
+      function themeName() {
+        return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+      }
+
+      function applyTheme(theme) {
+        const next = theme === 'dark' ? 'dark' : 'light';
+        document.documentElement.dataset.theme = next;
+        try { localStorage.setItem(THEME_KEY, next); } catch (err) { /* Ignore storage failures. */ }
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', next === 'dark' ? '#0c121c' : '#e8edf4');
+        const toggle = $('theme-toggle');
+        toggle.setAttribute('aria-pressed', next === 'dark' ? 'true' : 'false');
+        $('theme-label').textContent = next === 'dark' ? 'Light mode' : 'Dark mode';
+        if (map) {
+          setTiles(next);
+          render();
+        } else if (chartsReady) {
+          applyChartTheme();
+        }
+      }
+
+      function setTiles(theme) {
+        if (baseTiles) map.removeLayer(baseTiles);
+        if (labelTiles) map.removeLayer(labelTiles);
+        const dark = theme === 'dark';
+        const base = dark
+          ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+          : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+        const ref = dark
+          ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}'
+          : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
+        baseTiles = L.tileLayer(base, {
+          attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+          maxZoom: 16,
+          maxNativeZoom: 16
+        }).addTo(map);
+        labelTiles = L.tileLayer(ref, {
+          pane: 'labels',
+          maxZoom: 16,
+          maxNativeZoom: 16,
+          opacity: dark ? 0.85 : 0.92
+        }).addTo(map);
+      }
+
+      function markerStroke() {
+        return themeName() === 'dark' ? '#0c121c' : '#ffffff';
+      }
+
+      function routeColor() {
+        return themeName() === 'dark' ? '#8eb6ff' : '#1d4e89';
+      }
+
+      function chartPalette() {
+        const dark = themeName() === 'dark';
+        return {
+          tooltipBg: dark ? '#161e2e' : '#ffffff',
+          title: dark ? '#e8eef8' : '#152033',
+          body: dark ? '#c5d0e0' : '#3d4c63',
+          border: dark ? 'rgba(232,238,248,0.16)' : 'rgba(21,35,59,0.12)',
+          tick: dark ? '#c5d0e0' : '#3d4c63',
+          grid: dark ? 'rgba(232,238,248,0.08)' : 'rgba(21,35,59,0.08)',
+          rise: '#047857',
+          fall: '#be123c'
+        };
       }
 
       function ensureLayers(node) {
-        if (node.circle) return;
-        node.circle = L.circle([node.lat, node.lng], {
-          radius: 850,
-          weight: 2,
-          color: STATUS_COLOR.ok,
-          fillColor: STATUS_COLOR.ok,
-          fillOpacity: 0.16,
-          className: 'node-circle'
-        }).addTo(map);
-        node.circle.bindPopup('', { maxWidth: 260, className: 'node-pop' });
-        node.circle.bindTooltip('', { direction: 'top', offset: [0, -6], className: 'node-tip', opacity: 1 });
-        node.core = L.circleMarker([node.lat, node.lng], {
-          radius: 8,
-          weight: 2,
-          color: '#f6f3ec',
-          fillColor: STATUS_COLOR.ok,
-          fillOpacity: 1
-        }).addTo(map);
-        node.core.on('click', () => {
-          node.circle.openPopup();
+        if (!node.circle) {
+          node.circle = L.circle([node.lat, node.lng], {
+            radius: 900,
+            weight: 2,
+            color: STATUS_COLOR.ok,
+            fillColor: STATUS_COLOR.ok,
+            fillOpacity: 0.2,
+            bubblingMouseEvents: false
+          });
+          node.core = L.circleMarker([node.lat, node.lng], {
+            radius: 12,
+            weight: 2,
+            color: '#ffffff',
+            fillColor: STATUS_COLOR.ok,
+            fillOpacity: 1,
+            bubblingMouseEvents: false
+          });
+          const select = (event) => {
+            if (event && event.originalEvent) {
+              event.originalEvent._stopped = true;
+              L.DomEvent.stopPropagation(event);
+            }
+            state.selectedId = node.id;
+            render();
+          };
+          node.circle.on('click', select);
+          node.core.on('click', select);
+          node.circle.bindTooltip('', { direction: 'top', offset: [0, -8], className: 'node-tip', opacity: 1 });
+        }
+        if (!map.hasLayer(node.circle)) node.circle.addTo(map);
+        if (!map.hasLayer(node.core)) node.core.addTo(map);
+      }
+
+      function hideNode(node) {
+        ['circle', 'core'].forEach((key) => {
+          if (node[key] && map.hasLayer(node[key])) map.removeLayer(node[key]);
         });
+        if (node.halo) {
+          if (map.hasLayer(node.halo)) map.removeLayer(node.halo);
+          node.halo = null;
+        }
       }
 
       function syncHalo(node, status) {
-        if (status !== 'crit') {
+        if (status !== 'crit' || !passesFilter(node)) {
           if (node.halo) {
             map.removeLayer(node.halo);
             node.halo = null;
@@ -1147,53 +1352,63 @@
           icon: L.divIcon({
             className: 'halo-wrap',
             html: '<div class="halo"></div>',
-            iconSize: [86, 86],
-            iconAnchor: [43, 43]
+            iconSize: [78, 78],
+            iconAnchor: [39, 39]
           })
         }).addTo(map);
       }
 
       function syncNodeLayer(node) {
+        if (!passesFilter(node)) {
+          hideNode(node);
+          return;
+        }
         ensureLayers(node);
-        const status = statusOf(node);
+        const current = shownCurrent(node);
+        const status = statusOf(node, current);
         const color = STATUS_COLOR[status];
+        const selected = state.selectedId === node.id;
         node.circle.setStyle({
           color,
           fillColor: color,
-          fillOpacity: status === 'crit' ? 0.42 : status === 'warn' ? 0.3 : 0.24,
-          weight: status === 'crit' ? 3 : 2
+          fillOpacity: status === 'offline' ? 0.08 : status === 'crit' ? 0.38 : 0.22,
+          weight: selected ? 4 : 2
         });
-        const path = node.circle.getElement && node.circle.getElement();
-        if (path) path.classList.toggle('is-crit', status === 'crit');
-        node.core.setStyle({ fillColor: color, color: status === 'crit' ? '#fffdf8' : '#f6f3ec' });
-        const open = Math.max(0, node.max - node.current);
-        const pct = ((node.current / node.max) * 100).toFixed(1).replace(/\.0$/, '');
-        node.circle.setTooltipContent(node.short + ' · ' + node.current + '/' + node.max + ' · ' + pct + '%');
-        node.circle.setPopupContent(popupHtml(node));
+        node.core.setStyle({
+          radius: selected ? 14 : 12,
+          fillColor: color,
+          color: selected ? '#e36b2c' : markerStroke(),
+          weight: selected ? 3 : 2
+        });
+        const open = node.crashed ? 0 : Math.max(0, node.max - current);
+        const pct = node.crashed || !node.max ? 'offline' : ((current / node.max) * 100).toFixed(0) + '%';
+        node.circle.setTooltipContent(node.short + ' · ' + (node.crashed ? 'offline' : current + '/' + node.max) + ' · ' + pct + ' · ' + open + ' open');
         syncHalo(node, status);
       }
 
-      function drawRoutes(rows) {
+      function drawRoutes() {
+        if (!routeLayer) return;
         routeLayer.clearLayers();
-        (rows || []).filter((row) => row.allocated > 0).forEach((row) => {
+        if (!state.trace || isPreview()) return;
+        state.trace.rows.filter((row) => row.allocated > 0).forEach((row) => {
           const node = state.nodes.find((item) => item.id === row.id);
-          if (!node) return;
+          if (!node || !passesFilter(node)) return;
           const latlngs = [[DISPATCH.lat, DISPATCH.lng], [node.lat, node.lng]];
           routeLayer.addLayer(L.polyline(latlngs, {
-            color: '#7dba8a',
-            weight: 8,
-            opacity: 0.45,
+            color: routeColor(),
+            weight: 7,
+            opacity: 0.22,
             interactive: false
           }));
           const line = L.polyline(latlngs, {
-            color: '#1b4332',
+            color: routeColor(),
             weight: 2.5,
             opacity: 0.95,
             dashArray: '7 11',
             className: 'route-line',
             interactive: false
           });
-          line.bindTooltip(row.allocated + ' units → ' + node.short, { className: 'node-tip', opacity: 1 });
+          line.bindTooltip(row.allocated + ' people → ' + node.short, { className: 'node-tip', opacity: 1 });
           routeLayer.addLayer(line);
         });
       }
@@ -1201,81 +1416,461 @@
       function focusNode(id) {
         const node = state.nodes.find((item) => item.id === id);
         if (!node || !map) return;
-        const zoom = Math.max(map.getZoom(), 13);
-        if (reduceMotion) map.setView([node.lat, node.lng], zoom);
-        else map.flyTo([node.lat, node.lng], zoom, { duration: 0.55 });
-        node.circle.openPopup();
+        const zoom = Math.max(map.getZoom(), 12);
+        const target = [node.lat, node.lng];
+        if (reduceMotion) map.setView(target, zoom);
+        else map.flyTo(target, zoom, { duration: 0.55 });
       }
 
-      function renderNodes(flashIds) {
-        const flashes = new Set(flashIds || []);
-        state.nodes.forEach((node) => {
-          let button = nodeList.querySelector('[data-id="' + node.id + '"]');
-          if (!button) {
-            button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'node';
-            button.dataset.id = node.id;
-            button.innerHTML = '<span class="node-top"><i class="dot"></i><span class="node-name"></span><span class="node-count"></span></span><span class="node-sub"><span class="tag"></span><span class="node-open"></span></span><span class="meter" aria-hidden="true"><span class="meter-fill"></span></span>';
-            button.addEventListener('click', () => focusNode(node.id));
-            nodeList.appendChild(button);
-          }
-          const status = statusOf(node);
-          button.classList.toggle('flash', flashes.has(node.id));
-          button.querySelector('.dot').style.color = STATUS_COLOR[status];
-          button.querySelector('.node-name').textContent = node.short;
-          button.querySelector('.node-name').title = node.name;
-          button.querySelector('.node-count').textContent = node.current + '/' + node.max;
-          const tag = button.querySelector('.tag');
-          tag.textContent = node.tag;
-          tag.dataset.tag = node.tag;
-          const open = node.max - node.current;
-          button.querySelector('.node-open').textContent = open === 0 ? 'No open beds' : open + ' open';
-          const fill = button.querySelector('.meter-fill');
-          fill.style.background = STATUS_COLOR[status];
-          const width = Math.max(2, (node.current / node.max) * 100) + '%';
-          if (!button.dataset.ready) {
-            fill.style.width = '0%';
-            requestAnimationFrame(() => { fill.style.width = width; });
-            button.dataset.ready = '1';
+      function fitVisible() {
+        if (!map) return;
+        const visible = state.nodes.filter(passesFilter);
+        if (!visible.length) return;
+        const bounds = L.latLngBounds(visible.map((node) => [node.lat, node.lng]));
+        bounds.extend([DISPATCH.lat, DISPATCH.lng]);
+        map.fitBounds(bounds.pad(0.18), { paddingTopLeft: [40, 40], paddingBottomRight: [40, 110] });
+      }
+
+      function badge(status, label) {
+        const el = document.createElement('span');
+        el.className = 'badge ' + status;
+        el.textContent = label;
+        return el;
+      }
+
+      function renderInspector() {
+        const card = $('inspector');
+        const activeId = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.restoreFocus : '';
+        card.replaceChildren();
+        const node = state.nodes.find((item) => item.id === state.selectedId);
+        if (!node) {
+          renderAssignment(card);
+          return;
+        }
+        const current = shownCurrent(node);
+        const status = statusOf(node, current);
+        const open = node.crashed ? 0 : Math.max(0, node.max - current);
+        const pct = node.crashed || !node.max ? 0 : Math.round((current / node.max) * 100);
+        const kicker = document.createElement('p');
+        kicker.className = 'kicker';
+        kicker.textContent = node.borough + ' · ' + node.kind;
+        const title = document.createElement('h3');
+        title.textContent = node.name;
+        const statusBadge = badge(status, STATUS_LABEL[status]);
+        const meter = document.createElement('div');
+        meter.className = 'pop-meter';
+        const fill = document.createElement('span');
+        fill.style.width = pct + '%';
+        fill.style.background = STATUS_COLOR[status];
+        meter.appendChild(fill);
+        const meta = document.createElement('p');
+        meta.className = 'sub';
+        meta.textContent = node.crashed
+          ? 'Capacity crashed to 0. Routing skips this facility.'
+          : current + ' of ' + node.max + ' beds filled · ' + open + ' available beds';
+        const distance = document.createElement('p');
+        distance.className = 'sub';
+        distance.textContent = haversineKm(DISPATCH, node).toFixed(1) + ' km from NY-11 entry dispatch';
+        const actions = document.createElement('div');
+        actions.className = 'inspector-actions';
+        const force = document.createElement('button');
+        force.type = 'button';
+        force.dataset.restoreFocus = 'force';
+        if (node.crashed) {
+          force.disabled = true;
+          force.textContent = 'Facility offline';
+        } else if (state.forcedId === node.id) {
+          force.disabled = true;
+          force.textContent = 'Manual priority set';
+        } else {
+          force.textContent = 'Manually Force Reroute';
+          force.addEventListener('click', () => setForced(node.id));
+        }
+        const back = document.createElement('button');
+        back.type = 'button';
+        back.className = 'ghost';
+        back.textContent = 'Map summary';
+        back.addEventListener('click', () => {
+          state.selectedId = null;
+          render();
+        });
+        actions.append(force, back);
+        card.append(kicker, title, statusBadge, meter, meta, distance, actions);
+        if (activeId) {
+          const next = card.querySelector('[data-restore-focus="' + activeId + '"]');
+          if (next) next.focus();
+        }
+      }
+
+      function renderAssignment(card) {
+        const kicker = document.createElement('p');
+        kicker.className = 'kicker';
+        const title = document.createElement('h3');
+        const meta = document.createElement('p');
+        meta.className = 'sub';
+        const trace = state.trace;
+        if (!trace || isPreview()) {
+          kicker.textContent = 'Dispatch';
+          title.textContent = 'NY-11 Entry Dispatch';
+          meta.textContent = 'Waves start at 40.5895, −74.1154. Click a facility to inspect it or force the next reroute there.';
+        } else {
+          const placed = trace.rows.filter((row) => row.allocated > 0);
+          const top = placed.find((row) => row.forced) || placed[0];
+          if (!top) {
+            kicker.textContent = 'Failsafe';
+            title.textContent = 'No open bed in network';
+            meta.textContent = countFormat.format(trace.overflow) + ' people moved to the emergency foster and NGO network.';
           } else {
-            fill.style.width = width;
+            kicker.textContent = top.forced ? 'Manual priority' : (top.match ? 'Best requirement match' : 'Best available beds');
+            title.textContent = top.name;
+            const bits = [countFormat.format(top.allocated) + ' people', 'score ' + top.score.toFixed(2), top.distanceKm.toFixed(1) + ' km'];
+            if (trace.overflow > 0) bits.push(countFormat.format(trace.overflow) + ' through the failsafe');
+            meta.textContent = bits.join(' · ');
           }
-          button.setAttribute('aria-label', node.name + ', ' + node.tag + ', ' + node.current + ' of ' + node.max + ' beds. Focus on map.');
-          syncNodeLayer(node);
+        }
+        card.append(kicker, title, meta);
+      }
+
+      function renderMetrics() {
+        const snap = networkSnapshot();
+        tweenNumber($('stat-load'), Math.round(snap.load), (n) => n + '%');
+        tweenNumber($('stat-open'), snap.open, (n) => countFormat.format(n));
+        tweenNumber($('stat-crit'), snap.critical, (n) => countFormat.format(n));
+        $('stat-load-sub').textContent = countFormat.format(snap.current) + ' of ' + countFormat.format(snap.max) + ' beds filled';
+        $('stat-open-sub').textContent = snap.open === 1 ? 'Bed ready for intake' : 'Beds ready for intake';
+        $('stat-crit-sub').textContent = snap.critical ? 'Above 95% occupancy' : 'None above 95% occupancy';
+        const pill = $('status-pill');
+        pill.className = 'badge ' + (snap.worst === 'offline' ? 'offline' : snap.worst);
+        const labels = { ok: 'BALANCED', warn: 'STRAINED', crit: 'CRITICAL', offline: 'OFFLINE' };
+        $('status-text').textContent = labels[snap.worst];
+        $('preview-pill').hidden = !isPreview();
+        paintCensus();
+      }
+
+      function renderValve() {
+        const valve = state.valve;
+        $('valve').classList.toggle('hot', valve.active && !isPreview());
+        $('valve-badge').hidden = !(valve.active && !isPreview());
+        if (valve.active && !isPreview()) {
+          $('valve-kicker').textContent = 'Failsafe';
+          $('valve-title').textContent = 'Automatic Network Rerouting';
+          $('valve-copy').textContent = countFormat.format(valve.lastOverflow) + ' ' + (valve.lastOverflow === 1 ? 'person' : 'people') + ' from the last wave had no open bed and moved to the NY-11 Emergency Foster & NGO Distributed Network.';
+          $('valve-stat').textContent = 'Session total on the community network: ' + countFormat.format(valve.totalRouted);
+          $('map-alert').hidden = false;
+          $('map-alert-copy').textContent = countFormat.format(valve.lastOverflow) + ' unplaced ' + (valve.lastOverflow === 1 ? 'person is' : 'people are') + ' on the emergency foster and NGO network.';
+        } else {
+          $('valve-kicker').textContent = 'Failsafe';
+          $('valve-title').textContent = 'Automatic Network Rerouting';
+          $('valve-copy').textContent = 'Standing by. A full network reroutes to the foster and NGO grid.';
+          $('valve-stat').textContent = valve.totalRouted > 0
+            ? 'Session total already routed: ' + countFormat.format(valve.totalRouted)
+            : 'None rerouted this session.';
+          $('map-alert').hidden = true;
+        }
+      }
+
+      function renderForceNote() {
+        const note = $('force-note');
+        if (!state.forcedId) {
+          note.hidden = true;
+          note.replaceChildren();
+          return;
+        }
+        const node = state.nodes.find((item) => item.id === state.forcedId);
+        note.hidden = false;
+        note.replaceChildren();
+        const text = document.createElement('div');
+        text.textContent = node
+          ? 'Manual priority: ' + node.short + (node.crashed ? ' is offline and will be skipped.' : '. The next approval fills this facility first.')
+          : 'Manual priority cleared.';
+        const clear = document.createElement('button');
+        clear.type = 'button';
+        clear.className = 'text-btn';
+        clear.textContent = 'Clear manual priority';
+        clear.addEventListener('click', () => {
+          state.forcedId = null;
+          pushLogs([makeEntry('manual', 'MANUAL', 'Manual priority cleared.')], true);
+          render();
+        });
+        note.append(text, clear);
+      }
+
+      function renderCrashControl() {
+        const select = $('crash-node');
+        const signature = state.nodes.map((node) => node.id + (node.crashed ? '!' : '')).join('|');
+        if (select.dataset.sig !== signature) {
+          const current = select.value;
+          select.replaceChildren();
+          state.nodes.forEach((node) => {
+            const option = document.createElement('option');
+            option.value = node.id;
+            option.textContent = node.short + ' · ' + node.borough + (node.crashed ? ' · offline' : '');
+            select.appendChild(option);
+          });
+          if ([...select.options].some((option) => option.value === current)) select.value = current;
+          select.dataset.sig = signature;
+        }
+        const node = state.nodes.find((item) => item.id === select.value) || state.nodes[0];
+        $('crash-btn').textContent = node && node.crashed ? 'Restore capacity' : 'Crash capacity to 0';
+      }
+
+      function syncFilterSelects() {
+        ['map-filter', 'table-filter'].forEach((id) => {
+          const el = $(id);
+          if (el && el.value !== state.filter) el.value = state.filter;
         });
       }
 
-      function tweenNumber(el, to, format) {
-        const from = Number(el.dataset.val || '0');
-        el.dataset.val = String(to);
-        if (reduceMotion) {
-          el.textContent = format(to);
-          return;
-        }
-        const token = String(performance.now());
-        el.dataset.tween = token;
-        const start = performance.now();
-        const step = (now) => {
-          if (el.dataset.tween !== token) return;
-          const t = Math.min(1, (now - start) / 650);
-          const eased = 1 - Math.pow(1 - t, 3);
-          el.textContent = format(Math.round(from + (to - from) * eased));
-          if (t < 1) requestAnimationFrame(step);
-          else el.textContent = format(to);
-        };
-        requestAnimationFrame(step);
+      function visibleRows() {
+        return frameRows.filter((row) => {
+          const node = state.nodes.find((item) => item.id === row.id);
+          return node && passesFilter(node);
+        });
       }
 
-      const countFormat = new Intl.NumberFormat('en-US');
+      function renderMatrixNote() {
+        const spec = SPEC_LABEL[currentSpec()];
+        const note = $('matrix-note');
+        if (isPreview()) {
+          note.textContent = 'Showing the ' + formatHour(state.previewHour) + ' projection. Requirement Met follows ' + spec + '.';
+          return;
+        }
+        if (state.trace) {
+          note.textContent = 'Last wave placed ' + countFormat.format(state.trace.intake) + ' people · ' + (SPEC_LABEL[state.trace.spec] || state.trace.spec) + '. Requirement Met follows the current care setting, ' + spec + '.';
+          return;
+        }
+        note.textContent = 'One table for occupancy and score. Requirement Met follows ' + spec + '. The score formula sits on the info control in the Score column.';
+      }
+
+      function renderTable() {
+        const host = $('trace-body');
+        let table = host.querySelector('table');
+        if (!table) {
+          table = document.createElement('table');
+          table.className = 'matrix-table';
+          table.innerHTML = '<caption class="sr-only">Facility capacity, available beds, requirement, distance, and score</caption><thead><tr><th>Facility</th><th>Borough</th><th>Occupancy</th><th class="num">Available Beds</th><th>Requirement Met</th><th class="num">Distance (km)</th><th class="num"><span class="tip">Score<button type="button" class="info" aria-label="How the score is calculated">i</button><span class="tip-box" role="tooltip">Score = (available beds × 0.5) + (requirement met ? 30 : 0) − (distance in km × 0.2). Distance is the straight-line length from NY-11 entry dispatch. A facility with no available beds, or one taken offline, is skipped.</span></span></th><th class="num">Placed</th><th>Status</th></tr></thead><tbody></tbody>';
+          host.replaceChildren(table);
+          const info = table.querySelector('.info');
+          const place = () => {
+            const box = table.querySelector('.tip-box');
+            const rect = info.getBoundingClientRect();
+            const below = window.innerHeight - rect.bottom;
+            box.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 336)) + 'px';
+            if (below < 150) {
+              box.style.top = 'auto';
+              box.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+            } else {
+              box.style.bottom = 'auto';
+              box.style.top = (rect.bottom + 8) + 'px';
+            }
+          };
+          info.addEventListener('mouseenter', place);
+          info.addEventListener('focus', place);
+        }
+        const tbody = table.querySelector('tbody');
+        tbody.replaceChildren();
+        visibleRows().forEach((row) => {
+          const node = state.nodes.find((item) => item.id === row.id);
+          const current = shownCurrent(node);
+          const status = statusOf(node, current);
+          const pct = node.crashed || !node.max ? 0 : Math.round((current / node.max) * 100);
+          const tr = document.createElement('tr');
+          tr.tabIndex = 0;
+          if (state.selectedId === node.id) tr.classList.add('selected');
+          const openFacility = () => {
+            if (!passesFilter(node)) state.filter = 'all';
+            state.selectedId = node.id;
+            setView('command');
+            render();
+            setTimeout(() => focusNode(node.id), 50);
+          };
+          tr.addEventListener('click', openFacility);
+          tr.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              openFacility();
+            }
+          });
+          const name = document.createElement('td');
+          name.innerHTML = '<div class="facility-name"></div>';
+          name.querySelector('.facility-name').textContent = node.name;
+          const small = document.createElement('small');
+          small.textContent = node.kind + ' · ' + (SPEC_LABEL[node.tag] || node.tag);
+          name.querySelector('.facility-name').appendChild(small);
+          const borough = document.createElement('td');
+          borough.textContent = node.borough;
+          const occ = document.createElement('td');
+          occ.innerHTML = '<div class="occ"><div class="bar"><span></span></div><b></b></div>';
+          occ.querySelector('span').style.width = pct + '%';
+          occ.querySelector('span').style.background = STATUS_COLOR[status];
+          occ.querySelector('b').textContent = node.crashed ? 'Offline' : pct + '%';
+          const beds = document.createElement('td');
+          beds.className = 'num';
+          beds.textContent = node.crashed ? '0' : String(Math.max(0, node.max - current));
+          const match = document.createElement('td');
+          match.appendChild(node.crashed ? badge('offline', 'Offline') : badge(row.match ? 'ok' : 'neutral', row.match ? 'Met' : 'Not met'));
+          const distance = document.createElement('td');
+          distance.className = 'num';
+          distance.textContent = row.distanceKm.toFixed(1);
+          const score = document.createElement('td');
+          score.className = 'num';
+          score.appendChild(row.disqualified ? badge(row.crashed ? 'offline' : 'neutral', 'Skipped') : document.createTextNode(row.score.toFixed(1)));
+          const placed = document.createElement('td');
+          placed.className = 'num';
+          if (row.allocated == null || isPreview()) placed.textContent = '—';
+          else placed.textContent = String(row.allocated) + (row.forced ? ' manual' : '');
+          const stateCell = document.createElement('td');
+          stateCell.appendChild(badge(status, STATUS_LABEL[status]));
+          tr.append(name, borough, occ, beds, match, distance, score, placed, stateCell);
+          tbody.appendChild(tr);
+        });
+        if (state.trace && state.trace.overflow > 0 && !isPreview() && state.filter === 'all') {
+          const tr = document.createElement('tr');
+          const name = document.createElement('td');
+          name.colSpan = 7;
+          name.textContent = 'NY-11 Emergency Foster & NGO Distributed Network';
+          const placed = document.createElement('td');
+          placed.className = 'num';
+          placed.textContent = String(state.trace.overflow);
+          const flag = document.createElement('td');
+          flag.appendChild(badge('warn', 'Failsafe'));
+          tr.append(name, placed, flag);
+          tbody.appendChild(tr);
+        }
+      }
+
+      function renderTimeline() {
+        const snap = networkSnapshot();
+        const preview = isPreview();
+        const text = (preview ? formatHour(state.previewHour) + ' · Projected' : 'Live · ' + formatHour(state.previewHour)) + ' · load ' + Math.round(snap.load) + '%';
+        $('hour-readout').textContent = text;
+        slider.value = String(state.previewHour);
+        slider.setAttribute('aria-valuetext', text);
+        $('jump-live').disabled = !preview;
+        $('approve-note').hidden = !preview;
+        executeBtn.disabled = state.running || preview;
+        if (!state.running) executeBtn.textContent = 'Approve & Reroute Intake';
+      }
+
+      function matrixRows() {
+        const plan = planAllocation(previewNodes(), 0, currentSpec(), null);
+        const placed = new Map();
+        if (state.trace && !isPreview()) state.trace.rows.forEach((row) => placed.set(row.id, row));
+        return plan.rows.map((row) => {
+          const prior = placed.get(row.id);
+          return {
+            ...row,
+            allocated: prior ? prior.allocated : null,
+            forced: Boolean(prior && prior.forced)
+          };
+        });
+      }
+
+      function renderCharts() {
+        if (!chartsReady) return;
+        const palette = chartPalette();
+        const rows = visibleRows();
+        $('util-box').style.height = Math.max(240, rows.length * 28 + 36) + 'px';
+        utilChart.resize();
+        utilChart.data.labels = rows.map((row) => row.short);
+        utilChart.data.datasets[0].data = rows.map((row) => {
+          const node = state.nodes.find((item) => item.id === row.id);
+          if (!node || node.crashed || !node.max) return 0;
+          return Math.round((shownCurrent(node) / node.max) * 1000) / 10;
+        });
+        utilChart.data.datasets[0].backgroundColor = rows.map((row) => {
+          const node = state.nodes.find((item) => item.id === row.id);
+          return STATUS_COLOR[statusOf(node, shownCurrent(node))];
+        });
+        utilChart.update();
+        const deltas = state.censusDeltas.slice().reverse();
+        chart.data.labels = deltas.map((delta) => censusDate(delta.date));
+        chart.data.datasets[0].data = deltas.map((delta) => delta.individuals);
+        chart.data.datasets[0].backgroundColor = deltas.map((delta) => delta.individuals >= 0 ? palette.rise : palette.fall);
+        chart.update();
+      }
+
+      function renderMap() {
+        state.nodes.forEach(syncNodeLayer);
+        drawRoutes();
+        renderInspector();
+      }
+
+      function render() {
+        frameRows = matrixRows();
+        syncFilterSelects();
+        renderMetrics();
+        renderValve();
+        renderForceNote();
+        renderCrashControl();
+        renderMatrixNote();
+        renderTable();
+        renderTimeline();
+        renderMap();
+        renderCharts();
+      }
+
+      function setView(name) {
+        state.view = name;
+        document.querySelectorAll('.view').forEach((view) => {
+          view.hidden = view.dataset.view !== name;
+        });
+        document.querySelectorAll('.nav button').forEach((button) => {
+          if (button.dataset.view === name) button.setAttribute('aria-current', 'page');
+          else button.removeAttribute('aria-current');
+        });
+        if (name === 'command') requestAnimationFrame(() => map && map.invalidateSize());
+        if (name === 'facilities') requestAnimationFrame(() => ensureCharts());
+      }
+
+      function setFilter(value) {
+        state.filter = value;
+        const selected = state.nodes.find((node) => node.id === state.selectedId);
+        if (selected && !passesFilter(selected)) state.selectedId = null;
+        render();
+        fitVisible();
+      }
+
+      function setForced(id) {
+        const node = state.nodes.find((item) => item.id === id);
+        if (!node || node.crashed) return;
+        state.forcedId = id;
+        pushLogs([makeEntry('manual', 'MANUAL', 'Manual priority set to ' + node.name + '. The next approval fills it first.')], true);
+        render();
+      }
+
+      function goLive() {
+        stopPlay();
+        sliderLocked = false;
+        state.previewHour = etHour();
+        render();
+      }
+
+      function stopPlay() {
+        if (playTimer) clearInterval(playTimer);
+        playTimer = null;
+        $('play').textContent = 'Play';
+        $('play').setAttribute('aria-pressed', 'false');
+      }
+
+      function togglePlay() {
+        if (playTimer) {
+          stopPlay();
+          return;
+        }
+        $('play').textContent = 'Pause';
+        $('play').setAttribute('aria-pressed', 'true');
+        playTimer = setInterval(() => {
+          const next = (state.previewHour + 1) % 24;
+          state.previewHour = next;
+          sliderLocked = next !== etHour();
+          render();
+        }, reduceMotion ? 1400 : 900);
+      }
 
       function censusDate(iso) {
         const [year, month, day] = iso.split('-').map(Number);
-        return new Intl.DateTimeFormat('en-US', {
-          month: 'short',
-          day: 'numeric',
-          timeZone: 'UTC'
-        }).format(new Date(Date.UTC(year, month - 1, day)));
+        return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(year, month - 1, day)));
       }
 
       function priorDate(iso) {
@@ -1334,89 +1929,52 @@
 
       function paintPresets(deltas) {
         const presets = $('presets');
-        const peak = deltas.reduce((best, delta) => (
-          !best || delta.individuals > best.individuals ? delta : best
-        ), null);
+        const peak = deltas.reduce((best, delta) => (!best || delta.individuals > best.individuals ? delta : best), null);
         const waves = [
-          latestRise(deltas, 'singleAdults') && {
-            rise: latestRise(deltas, 'singleAdults'),
-            key: 'singleAdults',
-            spec: 'General',
-            label: 'Single adults',
-            title: 'Latest one-day rise in single adults in the DHS shelter census.'
-          },
-          latestRise(deltas, 'children') && {
-            rise: latestRise(deltas, 'children'),
-            key: 'children',
-            spec: 'Juvenile',
-            label: 'Children',
-            title: 'Latest one-day rise in children in families with children. The matrix places this wave with the Juvenile constraint.'
-          },
-          latestRise(deltas, 'familyIndividuals') && {
-            rise: latestRise(deltas, 'familyIndividuals'),
-            key: 'familyIndividuals',
-            spec: 'General',
-            label: 'Families',
-            title: 'Latest one-day rise in people in families with children.'
-          },
-          peak && peak.individuals > 0 && {
-            rise: peak,
-            key: 'individuals',
-            spec: 'General',
-            label: 'Peak rise',
-            title: 'Largest one-day rise in total people in shelter across the loaded census window.'
-          }
+          latestRise(deltas, 'singleAdults') && { rise: latestRise(deltas, 'singleAdults'), key: 'singleAdults', spec: 'General', label: 'Single adults' },
+          latestRise(deltas, 'children') && { rise: latestRise(deltas, 'children'), key: 'children', spec: 'Youth', label: 'Children' },
+          latestRise(deltas, 'familyIndividuals') && { rise: latestRise(deltas, 'familyIndividuals'), key: 'familyIndividuals', spec: 'General', label: 'Families' },
+          peak && peak.individuals > 0 && { rise: peak, key: 'individuals', spec: 'General', label: 'Peak rise' }
         ].filter(Boolean);
         presets.replaceChildren();
         waves.forEach((wave) => {
           const button = document.createElement('button');
           button.type = 'button';
+          button.dataset.lock = '1';
           button.dataset.intake = String(wave.rise[wave.key]);
           button.dataset.spec = wave.spec;
-          button.title = wave.title + ' ' + censusDate(wave.rise.date) + '.';
-          button.textContent = wave.label + ' +' + countFormat.format(wave.rise[wave.key]) + ' · ' + censusDate(wave.rise.date);
+          button.textContent = wave.label + ' +' + countFormat.format(wave.rise[wave.key]);
+          button.title = censusDate(wave.rise.date);
           presets.appendChild(button);
         });
       }
 
       function paintCensus() {
         const latest = state.censusRows[0];
-        const chip = $('census-chip');
-        const asof = $('census-asof');
-        const note = $('census-note');
         if (!latest) return;
-        chip.textContent = 'DHS · ' + censusDate(latest.date) + ' · ' + countFormat.format(latest.individuals);
+        $('census-chip').textContent = 'DHS · ' + censusDate(latest.date);
         const source = state.censusSource === 'live'
           ? 'live from NYC Open Data'
           : state.censusSource === 'error'
             ? 'saved snapshot, the live report did not load'
             : 'saved snapshot, checking NYC Open Data';
-        const year = latest.date.slice(0, 4);
-        const stamp = latest.date + '|' + state.censusSource;
-        if (asof.dataset.stamp !== stamp) {
-          asof.dataset.stamp = stamp;
+        const asof = $('census-asof');
+        const stampKey = latest.date + '|' + state.censusSource;
+        if (asof.dataset.stamp !== stampKey) {
+          asof.dataset.stamp = stampKey;
           asof.replaceChildren();
-          asof.append(document.createTextNode('Census date ' + censusDate(latest.date) + ', ' + year + ' · ' + source + ' · '));
+          asof.append(document.createTextNode('Census ' + censusDate(latest.date) + ' ' + latest.date.slice(0, 4) + ' · ' + source + ' · '));
           const link = document.createElement('a');
           link.href = DHS_PAGE;
           link.target = '_blank';
           link.rel = 'noopener noreferrer';
           link.textContent = 'DHS Daily Report';
-          asof.append(link);
+          asof.appendChild(link);
         }
-        note.textContent = 'Presets are one-day rises in the citywide DHS census. A children rise uses the Juvenile constraint. These four nodes are a NY-11 planning model: the report has no facility capacity.';
-        const individuals = $('kpi-individuals');
-        const children = $('kpi-children');
-        const single = $('kpi-single');
-        const families = $('kpi-families');
-        individuals.title = 'Total individuals in the DHS shelter system on the census date.';
-        children.title = 'Children in families with children in shelter.';
-        single.title = 'Single adult men and women in shelter.';
-        families.title = 'Families with children in shelter. Adult families are counted separately and are not included here.';
-        tweenNumber(individuals, latest.individuals, (n) => countFormat.format(n));
-        tweenNumber(children, latest.children, (n) => countFormat.format(n));
-        tweenNumber(single, latest.singleAdults, (n) => countFormat.format(n));
-        tweenNumber(families, latest.families, (n) => countFormat.format(n));
+        tweenNumber($('kpi-individuals'), latest.individuals, (n) => countFormat.format(n));
+        tweenNumber($('kpi-children'), latest.children, (n) => countFormat.format(n));
+        tweenNumber($('kpi-single'), latest.singleAdults, (n) => countFormat.format(n));
+        tweenNumber($('kpi-families'), latest.families, (n) => countFormat.format(n));
         if (!state.intakeTouched) {
           const rise = latestRise(state.censusDeltas, 'individuals');
           if (rise) intakeInput.value = String(rise.individuals);
@@ -1424,17 +1982,14 @@
       }
 
       function applyCensus(rows, source) {
-        const clean = rows
-          .filter((row) => row && /^\d{4}-\d{2}-\d{2}$/.test(row.date))
-          .slice()
-          .sort((a, b) => b.date.localeCompare(a.date));
+        const clean = rows.filter((row) => row && /^\d{4}-\d{2}-\d{2}$/.test(row.date)).sort((a, b) => b.date.localeCompare(a.date));
         if (clean.length < 2) return;
         state.censusRows = clean;
         state.censusDeltas = censusDeltas(clean);
         state.censusSource = source;
         paintPresets(state.censusDeltas);
         paintCensus();
-        renderChart();
+        renderCharts();
       }
 
       async function refreshCensus() {
@@ -1442,161 +1997,178 @@
           const response = await fetch(DHS_URL, { headers: { Accept: 'application/json' } });
           if (!response.ok) throw new Error('DHS report returned ' + response.status);
           const payload = await response.json();
-          if (!Array.isArray(payload)) throw new Error('DHS report was not a list of census rows.');
           const rows = payload.map(rowFromApi).filter(Boolean);
           if (rows.length < 2) throw new Error('DHS report did not include two census dates.');
           applyCensus(rows, 'live');
           const latest = state.censusRows[0];
-          pushLogs([makeEntry('sys', 'SYS:', 'DHS Daily Report live for ' + latest.date + '. ' + countFormat.format(latest.individuals) + ' individuals in shelter.')], false);
+          pushLogs([makeEntry('sys', 'SYS', 'DHS Daily Report loaded for ' + latest.date + '. ' + countFormat.format(latest.individuals) + ' people in shelter.')], false);
         } catch (err) {
           state.censusSource = 'error';
           paintCensus();
-          pushLogs([makeEntry('warning', 'WARNING:', 'DHS Daily Report did not load. Showing the saved NYC Open Data snapshot.')], false);
+          pushLogs([makeEntry('warning', 'WARNING', 'DHS Daily Report did not load. Showing the saved NYC Open Data snapshot.')], false);
         }
       }
 
-      function renderKpis() {
-        const snap = networkSnapshot();
-        paintCensus();
-        statusPill.className = 'pill ' + snap.worst;
-        statusText.textContent = snap.worst === 'crit' ? 'CRITICAL' : snap.worst === 'warn' ? 'STRAINED' : 'BALANCED';
-        const title = snap.critical
-          ? snap.critical + ' node' + (snap.critical === 1 ? '' : 's') + ' above 95% occupancy'
-          : snap.worst === 'warn'
-            ? 'Every node is between 70% and 95%'
-            : 'Every node is under 70% occupancy';
-        statusPill.title = title;
-      }
-
-      function renderValve() {
-        const valve = state.valve;
-        valveEl.classList.toggle('hot', valve.active);
-        if (valve.active) {
-          valveKicker.textContent = 'Critical override';
-          valveTitle.textContent = 'Release valve engaged';
-          valveCopy.textContent = valve.lastOverflow + ' ' + (valve.lastOverflow === 1 ? 'person' : 'people') + ' from the last wave had no open primary bed and moved to the NY-11 Emergency Foster & NGO Distributed Network.';
-          valveStat.textContent = 'Session total on the community grid: ' + valve.totalRouted;
-          mapAlert.hidden = false;
-          mapAlertCopy.textContent = valve.lastOverflow + ' unplaced ' + (valve.lastOverflow === 1 ? 'person is' : 'people are') + ' on the NY-11 Emergency Foster & NGO Distributed Network.';
-        } else {
-          valveKicker.textContent = 'Overflow path';
-          valveTitle.textContent = 'Release valve';
-          valveCopy.textContent = 'Standing by. Once every primary bed is full, overflow routes to the NY-11 Emergency Foster & NGO Distributed Network.';
-          valveStat.textContent = valve.totalRouted > 0
-            ? 'Session total already routed: ' + valve.totalRouted
-            : 'No overflow routed this session.';
-          mapAlert.hidden = true;
-        }
-      }
-
-      function renderAssign() {
-        const trace = state.trace;
-        if (!trace) {
-          assignCard.classList.remove('hot');
-          assignKicker.textContent = 'Primary vector';
-          assignName.textContent = 'Awaiting intake';
-          assignMeta.textContent = 'Vectors draw from entry dispatch to each node that receives people.';
-          return;
-        }
-        const placed = trace.rows.filter((row) => row.allocated > 0);
-        const top = placed[0];
-        assignCard.classList.toggle('hot', trace.overflow > 0);
-        if (!top) {
-          assignKicker.textContent = 'Critical override';
-          assignName.textContent = 'No open primary bed';
-          assignMeta.textContent = trace.overflow + ' units routed to the NY-11 Emergency Foster & NGO Distributed Network.';
-          return;
-        }
-        assignKicker.textContent = top.match ? 'Primary vector · match' : 'Primary vector';
-        assignName.textContent = top.name;
-        const bits = [top.allocated + ' units', 'score ' + top.score.toFixed(2), top.distanceKm.toFixed(1) + ' km'];
-        if (trace.overflow > 0) bits.push(trace.overflow + ' to NGO network');
-        assignMeta.textContent = bits.join(' · ');
-      }
-
-      function renderTrace() {
-        const trace = state.trace;
-        traceBody.replaceChildren();
-        if (!trace) {
-          traceWhen.textContent = 'No run yet';
-          const empty = document.createElement('p');
-          empty.className = 'empty-trace';
-          empty.textContent = 'Run an intake to see vacancies, match, distance, score, and where each person was placed.';
-          traceBody.appendChild(empty);
-          drawRoutes([]);
-          return;
-        }
-        traceWhen.textContent = trace.stamp + ' ET · ' + trace.intake + ' ' + trace.spec;
-        const table = document.createElement('table');
-        const thead = document.createElement('thead');
-        thead.innerHTML = '<tr><th>Node</th><th class="num">Vac</th><th>Match</th><th class="num">km</th><th class="num">Score</th><th class="num">Placed</th></tr>';
-        const tbody = document.createElement('tbody');
-        trace.rows.forEach((row) => {
-          const tr = document.createElement('tr');
-          if (row.disqualified) tr.className = 'dq';
-          else if (row.allocated > 0) tr.className = 'got';
-          const name = document.createElement('td');
-          name.className = 'name';
-          name.textContent = row.short;
-          name.title = row.name;
-          const vac = document.createElement('td');
-          vac.className = 'num';
-          vac.textContent = String(row.vacancies);
-          const match = document.createElement('td');
-          match.textContent = row.match ? 'Yes' : 'No';
-          const km = document.createElement('td');
-          km.className = 'num';
-          km.textContent = row.distanceKm.toFixed(2);
-          const score = document.createElement('td');
-          score.className = 'num';
-          score.textContent = row.disqualified ? 'DQ' : row.score.toFixed(2);
-          const placed = document.createElement('td');
-          placed.className = 'num placed';
-          placed.textContent = String(row.allocated);
-          tr.append(name, vac, match, km, score, placed);
-          tbody.appendChild(tr);
+      function applyChartTheme() {
+        if (!chartsReady) return;
+        const palette = chartPalette();
+        [chart, utilChart].forEach((item) => {
+          item.options.plugins.tooltip.backgroundColor = palette.tooltipBg;
+          item.options.plugins.tooltip.borderColor = palette.border;
+          item.options.plugins.tooltip.titleColor = palette.title;
+          item.options.plugins.tooltip.bodyColor = palette.body;
+          item.options.scales.x.ticks.color = palette.tick;
+          item.options.scales.y.ticks.color = palette.tick;
+          if (item.options.scales.y.grid) item.options.scales.y.grid.color = palette.grid;
+          if (item.options.scales.x.grid) item.options.scales.x.grid.color = palette.grid;
         });
-        if (trace.overflow > 0) {
-          const tr = document.createElement('tr');
-          tr.className = 'overflow';
-          const name = document.createElement('td');
-          name.colSpan = 5;
-          name.textContent = 'NY-11 Emergency Foster & NGO Network';
-          const placed = document.createElement('td');
-          placed.className = 'num';
-          placed.textContent = String(trace.overflow);
-          tr.append(name, placed);
-          tbody.appendChild(tr);
+        renderCharts();
+      }
+
+      function ensureCharts() {
+        if (chartsReady) {
+          chart.resize();
+          utilChart.resize();
+          renderCharts();
+          return;
         }
-        table.append(thead, tbody);
-        traceBody.appendChild(table);
-        drawRoutes(trace.rows);
+        initCharts();
+        chartsReady = true;
+        renderCharts();
       }
 
-      function renderChart() {
-        if (!chart) return;
+      function initCharts() {
+        const palette = chartPalette();
+        const tooltip = {
+          backgroundColor: palette.tooltipBg,
+          borderColor: palette.border,
+          borderWidth: 1,
+          titleColor: palette.title,
+          bodyColor: palette.body,
+          titleFont: { family: 'Outfit' },
+          bodyFont: { family: 'IBM Plex Mono' }
+        };
         const deltas = state.censusDeltas.slice().reverse();
-        chart.data.labels = deltas.map((delta) => censusDate(delta.date));
-        chart.data.datasets[0].data = deltas.map((delta) => delta.individuals);
-        chart.data.datasets[0].backgroundColor = deltas.map((delta) => delta.individuals >= 0 ? '#1f8a4d' : '#e36a45');
-        chart.update();
+        chart = new Chart($('capacity-chart'), {
+          type: 'bar',
+          data: {
+            labels: deltas.map((delta) => censusDate(delta.date)),
+            datasets: [{
+              data: deltas.map((delta) => delta.individuals),
+              backgroundColor: deltas.map((delta) => delta.individuals >= 0 ? palette.rise : palette.fall),
+              borderWidth: 0,
+              borderRadius: 4,
+              maxBarThickness: 16
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            onClick(event, elements) {
+              if (!elements.length || state.running) return;
+              const delta = state.censusDeltas.slice().reverse()[elements[0].index];
+              if (!delta || delta.individuals <= 0) return;
+              state.intakeTouched = true;
+              intakeInput.value = String(delta.individuals);
+              specSelect.value = 'General';
+              showError('');
+              setView('command');
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                ...tooltip,
+                callbacks: {
+                  label(item) {
+                    const value = item.parsed.y;
+                    return ' ' + (value > 0 ? '+' : '') + countFormat.format(value) + ' people from the prior census day';
+                  }
+                }
+              }
+            },
+            scales: {
+              x: { ticks: { color: palette.tick, maxRotation: 0, maxTicksLimit: 6 }, grid: { display: false }, border: { display: false } },
+              y: {
+                ticks: { color: palette.tick, callback: (value) => (value > 0 ? '+' : '') + countFormat.format(value) },
+                grid: { color: palette.grid },
+                border: { display: false }
+              }
+            }
+          }
+        });
+        utilChart = new Chart($('util-chart'), {
+          type: 'bar',
+          data: { labels: [], datasets: [{ data: [], borderWidth: 0, borderRadius: 4, maxBarThickness: 14 }] },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            onClick(event, elements) {
+              if (!elements.length) return;
+              const row = visibleRows()[elements[0].index];
+              if (!row) return;
+              state.selectedId = row.id;
+              setView('command');
+              render();
+              setTimeout(() => focusNode(row.id), 50);
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                ...tooltip,
+                callbacks: { label(item) { return ' ' + item.parsed.x + '% occupied'; } }
+              }
+            },
+            scales: {
+              x: { min: 0, max: 100, ticks: { color: palette.tick, callback: (value) => value + '%' }, grid: { color: palette.grid }, border: { display: false } },
+              y: { ticks: { color: palette.tick, autoSkip: false, font: { size: 11, family: 'Source Sans 3, sans-serif' } }, grid: { display: false }, border: { display: false } }
+            }
+          }
+        });
       }
 
-      function render(flashIds) {
-        renderNodes(flashIds);
-        renderKpis();
-        renderValve();
-        renderAssign();
-        renderTrace();
-        renderChart();
+      function initMap() {
+        map = L.map('map', { zoomControl: false, attributionControl: true, minZoom: 9, maxZoom: 16 });
+        L.control.zoom({ position: 'topright' }).addTo(map);
+        map.createPane('labels');
+        map.getPane('labels').style.zIndex = 250;
+        map.getPane('labels').style.pointerEvents = 'none';
+        map.createPane('halos');
+        map.getPane('halos').style.zIndex = 350;
+        map.getPane('halos').style.pointerEvents = 'none';
+        setTiles(themeName());
+        routeLayer = L.layerGroup().addTo(map);
+        const dispatchMarker = L.marker([DISPATCH.lat, DISPATCH.lng], {
+          icon: L.divIcon({
+            className: 'dispatch-wrap',
+            html: '<div class="dispatch-pin"><i></i><em>Entry dispatch</em></div>',
+            iconSize: [148, 28],
+            iconAnchor: [12, 14]
+          }),
+          zIndexOffset: 800,
+          title: DISPATCH.name
+        }).addTo(map);
+        dispatchMarker.on('click', (event) => {
+          if (event && event.originalEvent) {
+            event.originalEvent._stopped = true;
+            L.DomEvent.stopPropagation(event);
+          }
+          state.selectedId = null;
+          render();
+        });
+        const bounds = L.latLngBounds(state.nodes.map((node) => [node.lat, node.lng]));
+        bounds.extend([DISPATCH.lat, DISPATCH.lng]);
+        map.fitBounds(bounds.pad(0.15), { paddingTopLeft: [40, 30], paddingBottomRight: [40, 120] });
+        map.on('click', (event) => {
+          if (event.originalEvent && event.originalEvent._stopped) return;
+          if (!state.selectedId) return;
+          state.selectedId = null;
+          render();
+        });
       }
 
       function applyRun(intake, spec) {
-        const plan = planAllocation(state.nodes, intake, spec);
-        const placed = plan.rows.reduce((sum, row) => sum + row.allocated, 0);
-        if (placed + plan.overflow !== intake) {
-          console.error('Allocation invariant failed', { placed, overflow: plan.overflow, intake });
-        }
+        const plan = planAllocation(state.nodes, intake, spec, state.forcedId);
         plan.rows.forEach((row) => {
           if (!row.allocated) return;
           const node = state.nodes.find((item) => item.id === row.id);
@@ -1616,69 +2188,69 @@
         state.valve.totalRouted += plan.overflow;
         state.valve.lastIntake = intake;
         state.valve.lastSpec = spec;
-
-        const entries = [makeEntry('run', 'RUN:', 'Intake ' + intake + ' · constraint ' + spec + ' · dispatch 40.5895, -74.1154.')];
+        const entries = [makeEntry('run', 'RUN', 'Incoming ' + countFormat.format(intake) + ' · ' + SPEC_LABEL[spec] + ' · dispatch 40.5895, -74.1154.')];
+        if (plan.forcedSkipped) {
+          const forced = state.nodes.find((node) => node.id === state.forcedId);
+          entries.push(makeEntry('warning', 'WARNING', 'Manual priority ' + (forced ? forced.name : 'facility') + ' had no available beds and was skipped.'));
+        }
         plan.rows.forEach((row) => {
           if (row.disqualified) {
-            entries.push(makeEntry('score', 'SCORE:', row.name + ' · hard penalty · disqualified at maximum capacity.'));
+            entries.push(makeEntry('score', 'SCORE', row.name + ' · skipped · ' + (row.crashed ? 'capacity crashed to 0.' : 'no available beds.')));
             return;
           }
-          entries.push(makeEntry(
-            'score',
-            'SCORE:',
-            row.name + ' · ' + row.score.toFixed(2) + ' · ' + (row.match ? 'match' : 'no match') + ' · vac ' + row.vacancies + ' · ' + row.distanceKm.toFixed(2) + ' km.'
-          ));
+          entries.push(makeEntry('score', 'SCORE', row.name + ' · score ' + row.score.toFixed(1) + ' · ' + (row.match ? 'requirement met' : 'requirement not met') + ' · ' + row.vacancies + ' available beds · ' + row.distanceKm.toFixed(1) + ' km.'));
         });
         plan.rows.forEach((row) => {
           if (!row.allocated) return;
           const after = row.before + row.allocated;
-          entries.push(makeEntry('alloc', 'ALLOC:', row.name + ' ← ' + row.allocated + ' units (' + row.before + ' → ' + after + ').'));
-          if (after >= row.max) {
-            entries.push(makeEntry('warning', 'WARNING:', row.name + ' reached maximum capacity.'));
-          }
+          entries.push(makeEntry('alloc', 'PLACE', row.name + ' ← ' + countFormat.format(row.allocated) + ' people (' + row.before + ' → ' + after + ')' + (row.forced ? ' · manual priority.' : '.')));
+          if (after >= row.max) entries.push(makeEntry('warning', 'WARNING', row.name + ' has no available beds left.'));
         });
         if (plan.overflow > 0) {
-          entries.push(makeEntry('warning', 'WARNING:', 'Primary infrastructure saturated. Engaging community release valve grid.'));
-          entries.push(makeEntry('critical', 'CRITICAL:', plan.overflow + ' units routed to the NY-11 Emergency Foster & NGO Distributed Network.'));
+          entries.push(makeEntry('warning', 'WARNING', 'Open beds are full. Failsafe: Automatic Network Rerouting is on.'));
+          entries.push(makeEntry('critical', 'CRITICAL', countFormat.format(plan.overflow) + ' people routed to the NY-11 Emergency Foster & NGO Distributed Network.'));
         } else {
-          entries.push(makeEntry('ok', 'OK:', 'Primary grid absorbed ' + intake + ' units. Release valve standing by.'));
+          entries.push(makeEntry('ok', 'OK', 'The network placed all ' + countFormat.format(intake) + ' people. Failsafe standing by.'));
         }
         pushLogs(entries, true);
-        saveMemory();
-        render(plan.rows.filter((row) => row.allocated > 0).map((row) => row.id));
+        render();
       }
 
       function restoreBaseline() {
-        state.nodes.forEach((node) => { node.current = node.baseline; });
+        state.nodes.forEach((node) => {
+          node.current = node.baseline;
+          node.crashed = false;
+        });
         state.trace = null;
-        state.valve = { active: false, lastOverflow: 0, totalRouted: 0, lastIntake: 0, lastSpec: specSelect.value };
-        pushLogs([makeEntry('sys', 'SYS:', 'Baseline restored. Nodes returned to opening occupancy and vectors cleared.')], true);
-        saveMemory();
+        state.forcedId = null;
+        state.selectedId = null;
+        state.valve = { active: false, lastOverflow: 0, totalRouted: 0, lastIntake: 0, lastSpec: currentSpec() };
+        goLive();
+        pushLogs([makeEntry('sys', 'SYS', 'Baseline restored. Facilities returned to opening occupancy and manual priority was cleared.')], true);
+        render();
+      }
+
+      function toggleCrash() {
+        const node = state.nodes.find((item) => item.id === $('crash-node').value);
+        if (!node) return;
+        node.crashed = !node.crashed;
+        pushLogs([makeEntry(node.crashed ? 'warning' : 'sys', node.crashed ? 'WARNING' : 'SYS', node.crashed
+          ? node.name + ' capacity crashed to 0. It is offline and will not receive people.'
+          : node.name + ' capacity restored. Previous occupancy is back on the network.')], true);
         render();
       }
 
       function clearLog() {
         state.logs = [];
-        logEl.replaceChildren();
-        const empty = document.createElement('p');
-        empty.id = 'log-empty';
-        empty.textContent = 'Telemetry channel idle. Execute a run to record the matrix.';
-        logEl.appendChild(empty);
-        pushLogs([makeEntry('sys', 'SYS:', 'Telemetry buffer cleared.')], true);
-        saveMemory();
+        pushLogs([makeEntry('sys', 'SYS', 'Audit trail cleared.')], true);
+        paintAllLogs();
       }
 
       function setBusy(busy) {
-        executeBtn.disabled = busy;
-        executeBtn.textContent = busy ? 'Computing…' : 'Execute balance matrix';
-        document.querySelectorAll('#presets button, #reset, #clear-log').forEach((button) => {
-          button.disabled = busy;
-        });
-        document.body.dataset.state = busy ? 'running' : 'idle';
-      }
-
-      function delay(ms) {
-        return new Promise((resolve) => setTimeout(resolve, ms));
+        state.running = busy;
+        executeBtn.disabled = busy || isPreview();
+        executeBtn.textContent = busy ? 'Placing…' : 'Approve & Reroute Intake';
+        document.querySelectorAll('[data-lock]').forEach((button) => { button.disabled = busy; });
       }
 
       async function onSubmit(event) {
@@ -1687,23 +2259,19 @@
         const parsed = readIntake();
         if (parsed.error) {
           showError(parsed.error);
-          intakeInput.focus();
+          if (!isPreview()) intakeInput.focus();
           return;
         }
         showError('');
-        state.running = true;
         setBusy(true);
-        overlay.classList.remove('on');
-        void overlay.offsetWidth;
         overlay.classList.add('on');
         overlay.setAttribute('aria-hidden', 'false');
         try {
-          await delay(1000);
+          await new Promise((resolve) => setTimeout(resolve, reduceMotion ? 160 : 900));
           applyRun(parsed.intake, parsed.spec);
         } finally {
           overlay.classList.remove('on');
           overlay.setAttribute('aria-hidden', 'true');
-          state.running = false;
           setBusy(false);
         }
       }
@@ -1712,7 +2280,7 @@
         const app = $('app');
         app.replaceChildren();
         const card = document.createElement('section');
-        card.className = 'boot-error glass';
+        card.className = 'boot-error card';
         const title = document.createElement('h1');
         title.textContent = 'NetShelter cannot start';
         const copy = document.createElement('p');
@@ -1721,8 +2289,29 @@
         app.appendChild(card);
       }
 
+      function selfCheck() {
+        if (new Set(FACILITIES.map((node) => node.id)).size !== FACILITIES.length) {
+          throw new Error('Duplicate facility id.');
+        }
+        const names = ['Flushing Meadows Transit Hub', 'Astoria Resource Center', 'Downtown Brooklyn Intake', 'Coney Island Relief Station', 'Penn Station Transit Point', 'Harlem Community Hub', 'South Bronx Relief Station', 'Jamaica Station Hub', 'Fort Wadsworth Reception', 'Newark Penn Transit Point', 'Elizabeth Border Catchment'];
+        names.forEach((name) => {
+          if (!FACILITIES.some((node) => node.name === name)) throw new Error('Missing ' + name);
+        });
+        const sample = planAllocation(state.nodes, 120, 'General', null);
+        const placed = sample.rows.reduce((sum, row) => sum + row.allocated, 0);
+        if (placed + sample.overflow !== 120) throw new Error('Allocation did not account for every person.');
+        const forced = planAllocation(state.nodes, 10, 'General', 'harlem');
+        const harlem = forced.rows.find((row) => row.id === 'harlem');
+        if (!harlem || harlem.allocated !== 10) throw new Error('Manual priority did not fill first.');
+        const nearer = haversineKm(DISPATCH, state.nodes.find((node) => node.id === 'new-dorp-family'));
+        const farther = haversineKm(DISPATCH, state.nodes.find((node) => node.id === 'penn'));
+        if (!(nearer < farther)) throw new Error('Dispatch distances look wrong.');
+        const critical = state.nodes.filter((node) => node.current / node.max > 0.95);
+        if (critical.length < 2) throw new Error('Opening network should include critical facilities.');
+      }
+
       function renderClock() {
-        clockEl.textContent = new Intl.DateTimeFormat('en-US', {
+        $('clock').textContent = new Intl.DateTimeFormat('en-US', {
           timeZone: 'America/New_York',
           weekday: 'short',
           month: 'short',
@@ -1732,170 +2321,102 @@
           second: '2-digit',
           hourCycle: 'h23'
         }).format(new Date()) + ' ET';
-      }
-
-      function initMap() {
-        map = L.map('map', {
-          zoomControl: false,
-          attributionControl: true,
-          minZoom: 10,
-          maxZoom: 16
-        }).setView(MAP_CENTER, 11);
-        L.control.zoom({ position: 'topright' }).addTo(map);
-        // Esri World Light Gray Canvas stays keyless and matches the daylight dashboard.
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-          attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
-          maxZoom: 16,
-          maxNativeZoom: 16
-        }).addTo(map);
-        map.createPane('labels');
-        const labelPane = map.getPane('labels');
-        labelPane.style.zIndex = 250;
-        labelPane.style.pointerEvents = 'none';
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
-          pane: 'labels',
-          maxZoom: 16,
-          maxNativeZoom: 16,
-          opacity: 0.9
-        }).addTo(map);
-        map.createPane('halos');
-        map.getPane('halos').style.zIndex = 350;
-        map.getPane('halos').style.pointerEvents = 'none';
-        routeLayer = L.layerGroup().addTo(map);
-        const dispatchIcon = L.divIcon({
-          className: 'dispatch-wrap',
-          html: '<div class="dispatch-pin"><i></i><em>Entry dispatch</em></div>',
-          iconSize: [150, 28],
-          iconAnchor: [14, 14]
-        });
-        const dispatchMarker = L.marker([DISPATCH.lat, DISPATCH.lng], {
-          icon: dispatchIcon,
-          zIndexOffset: 900,
-          title: 'NY-11 Entry Dispatch'
-        }).addTo(map);
-        dispatchMarker.bindPopup(
-          '<div class="pop"><div class="pop-tag">Fixed origin</div><strong>NY-11 Entry Dispatch</strong><p>Every intake wave starts here, at 40.5895, −74.1154, before the matrix assigns beds.</p></div>'
-        );
-      }
-
-      function initChart() {
-        const context = $('capacity-chart');
-        const deltas = state.censusDeltas.slice().reverse();
-        chart = new Chart(context, {
-          type: 'bar',
-          data: {
-            labels: deltas.map((delta) => censusDate(delta.date)),
-            datasets: [{
-              label: 'Net change',
-              data: deltas.map((delta) => delta.individuals),
-              backgroundColor: deltas.map((delta) => delta.individuals >= 0 ? '#1f8a4d' : '#e36a45'),
-              borderWidth: 0,
-              borderRadius: 4,
-              maxBarThickness: 14
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: { duration: reduceMotion ? 0 : 700, easing: 'easeOutCubic' },
-            onClick(event, elements) {
-              if (!elements.length || state.running) return;
-              const delta = state.censusDeltas.slice().reverse()[elements[0].index];
-              if (!delta || delta.individuals <= 0) return;
-              state.intakeTouched = true;
-              intakeInput.value = String(delta.individuals);
-              specSelect.value = 'General';
-              showError('');
-            },
-            onHover(event, elements) {
-              const target = event.native && event.native.target;
-              if (target) target.style.cursor = elements.length ? 'pointer' : 'default';
-            },
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                backgroundColor: 'rgba(255, 252, 246, 0.98)',
-                borderColor: 'rgba(27, 67, 50, 0.12)',
-                borderWidth: 1,
-                titleColor: '#1c2b24',
-                bodyColor: '#31443a',
-                titleFont: { family: 'Nunito' },
-                bodyFont: { family: '"IBM Plex Mono", monospace' },
-                callbacks: {
-                  title(items) {
-                    const delta = state.censusDeltas.slice().reverse()[items[0].dataIndex];
-                    return delta ? delta.date : '';
-                  },
-                  label(item) {
-                    const value = item.parsed.y;
-                    const sign = value > 0 ? '+' : '';
-                    return ' ' + sign + countFormat.format(value) + ' people from the previous census day';
-                  }
-                }
-              }
-            },
-            scales: {
-              x: {
-                ticks: {
-                  color: '#4e5f56',
-                  maxRotation: 0,
-                  autoSkip: true,
-                  maxTicksLimit: 6,
-                  font: { family: 'Nunito, sans-serif', size: 10 }
-                },
-                grid: { display: false },
-                border: { display: false }
-              },
-              y: {
-                ticks: {
-                  color: '#4e5f56',
-                  font: { family: '"IBM Plex Mono", monospace', size: 10 },
-                  callback: (value) => (value > 0 ? '+' : '') + countFormat.format(value)
-                },
-                grid: { color: 'rgba(27, 67, 50, 0.08)' },
-                border: { display: false }
-              }
-            }
+        if (!sliderLocked && !playTimer) {
+          const hour = etHour();
+          if (state.previewHour !== hour) {
+            state.previewHour = hour;
+            render();
           }
-        });
+        }
       }
 
       function boot() {
         if (!window.L || !window.Chart) {
-          bootError('Leaflet or Chart.js did not load. Reconnect and reload. Both libraries are required for the map and the capacity chart.');
+          bootError('Leaflet or Chart.js did not load. Reconnect and reload. Both are required for the map and the charts.');
           return;
         }
+        try { selfCheck(); } catch (err) {
+          bootError(err.message);
+          return;
+        }
+        applyTheme(document.documentElement.dataset.theme || 'light');
         loadMemory();
+        state.previewHour = etHour();
         applyCensus(CENSUS_FALLBACK.map(rowFromTuple), 'cache');
         initMap();
-        initChart();
-        state.logs.forEach(paintLog);
+        if (!state.logs.length) {
+          state.logs.push(makeEntry('sys', 'SYS', 'Network online. ' + FACILITIES.length + ' facilities synced. Dispatch locked at 40.5895, -74.1154.'));
+          saveMemory();
+        }
+        paintAllLogs();
         render();
-        pushLogs([makeEntry('sys', 'SYS:', 'Matrix online. Four NY-11 nodes synced from local memory. Dispatch locked at 40.5895, -74.1154.')], false);
         refreshCensus();
         renderClock();
         setInterval(renderClock, 1000);
+        document.querySelectorAll('.nav button').forEach((button) => {
+          button.addEventListener('click', () => setView(button.dataset.view));
+        });
+        $('theme-toggle').addEventListener('click', () => applyTheme(themeName() === 'dark' ? 'light' : 'dark'));
         $('intake-form').addEventListener('submit', onSubmit);
         intakeInput.addEventListener('wheel', () => intakeInput.blur(), { passive: true });
         intakeInput.addEventListener('input', () => { state.intakeTouched = true; });
-        specSelect.addEventListener('change', () => { state.intakeTouched = true; });
+        specSelect.addEventListener('change', () => {
+          state.intakeTouched = true;
+          render();
+        });
         $('presets').addEventListener('click', (event) => {
           const button = event.target.closest('button');
           if (!button || state.running) return;
           state.intakeTouched = true;
           intakeInput.value = button.dataset.intake;
           specSelect.value = button.dataset.spec;
+          if (isPreview()) {
+            showError('This hour is a projection. Return to the live hour before approving a reroute.');
+            return;
+          }
           $('intake-form').requestSubmit();
         });
-        $('reset').addEventListener('click', () => {
-          if (!state.running) restoreBaseline();
+        $('reset').addEventListener('click', () => { if (!state.running) restoreBaseline(); });
+        $('crash-node').addEventListener('change', renderCrashControl);
+        $('crash-btn').addEventListener('click', () => { if (!state.running) toggleCrash(); });
+        $('wave-btn').addEventListener('click', () => {
+          if (state.running) return;
+          state.intakeTouched = true;
+          intakeInput.value = '120';
+          showError('');
+          if (isPreview()) {
+            showError('This hour is a projection. Return to the live hour, then approve the wave of 120.');
+            return;
+          }
+          $('intake-form').requestSubmit();
         });
-        $('clear-log').addEventListener('click', () => {
-          if (!state.running) clearLog();
+        $('map-filter').addEventListener('change', (event) => setFilter(event.target.value));
+        $('table-filter').addEventListener('change', (event) => setFilter(event.target.value));
+        slider.addEventListener('input', () => {
+          stopPlay();
+          state.previewHour = Number(slider.value);
+          sliderLocked = state.previewHour !== etHour();
+          render();
         });
-        window.addEventListener('resize', () => map.invalidateSize());
+        $('play').addEventListener('click', togglePlay);
+        $('jump-live').addEventListener('click', goLive);
+        $('log-filter').addEventListener('change', (event) => {
+          state.logFilter = event.target.value;
+          paintAllLogs();
+        });
+        $('clear-log').addEventListener('click', () => { if (!state.running) clearLog(); });
+        window.addEventListener('resize', () => {
+          if (map) map.invalidateSize();
+          if (chart) chart.resize();
+          if (utilChart) utilChart.resize();
+        });
         setTimeout(() => map.invalidateSize(), 180);
-        requestAnimationFrame(() => map.invalidateSize());
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(() => {
+            if (chart) chart.resize();
+            if (utilChart) utilChart.resize();
+          });
+        }
       }
 
       window.NetShelter = {
@@ -1903,18 +2424,17 @@
         haversineKm,
         statusOf,
         DISPATCH,
+        FACILITIES,
         getState: () => ({
-          nodes: state.nodes.map(({ id, name, short, current, max, tag, lat, lng }) => ({ id, name, short, current, max, tag, lat, lng })),
+          view: state.view,
+          filter: state.filter,
+          forcedId: state.forcedId,
+          previewHour: state.previewHour,
+          theme: themeName(),
+          nodes: state.nodes.map(({ id, name, short, current, max, tag, lat, lng, crashed, borough }) => ({ id, name, short, current, max, tag, lat, lng, crashed, borough })),
           valve: { ...state.valve },
           trace: state.trace,
-          census: state.censusRows[0] ? {
-            source: state.censusSource,
-            date: state.censusRows[0].date,
-            individuals: state.censusRows[0].individuals,
-            children: state.censusRows[0].children,
-            singleAdults: state.censusRows[0].singleAdults,
-            families: state.censusRows[0].families
-          } : null
+          census: state.censusRows[0] || null
         })
       };
 
