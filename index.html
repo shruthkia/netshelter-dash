@@ -1295,21 +1295,26 @@
       function ensureLayers(node) {
         if (!node.circle) {
           node.circle = L.circle([node.lat, node.lng], {
-            radius: 420,
+            radius: 900,
             weight: 2,
             color: STATUS_COLOR.ok,
             fillColor: STATUS_COLOR.ok,
-            fillOpacity: 0.2
+            fillOpacity: 0.2,
+            bubblingMouseEvents: false
           });
           node.core = L.circleMarker([node.lat, node.lng], {
-            radius: 7,
+            radius: 12,
             weight: 2,
             color: '#ffffff',
             fillColor: STATUS_COLOR.ok,
-            fillOpacity: 1
+            fillOpacity: 1,
+            bubblingMouseEvents: false
           });
           const select = (event) => {
-            if (event && event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
+            if (event && event.originalEvent) {
+              event.originalEvent._stopped = true;
+              L.DomEvent.stopPropagation(event);
+            }
             state.selectedId = node.id;
             render();
           };
@@ -1370,7 +1375,7 @@
           weight: selected ? 4 : 2
         });
         node.core.setStyle({
-          radius: selected ? 9 : 7,
+          radius: selected ? 14 : 12,
           fillColor: color,
           color: selected ? '#e36b2c' : markerStroke(),
           weight: selected ? 3 : 2
@@ -2144,14 +2149,18 @@
           title: DISPATCH.name
         }).addTo(map);
         dispatchMarker.on('click', (event) => {
-          if (event && event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
+          if (event && event.originalEvent) {
+            event.originalEvent._stopped = true;
+            L.DomEvent.stopPropagation(event);
+          }
           state.selectedId = null;
           render();
         });
         const bounds = L.latLngBounds(state.nodes.map((node) => [node.lat, node.lng]));
         bounds.extend([DISPATCH.lat, DISPATCH.lng]);
         map.fitBounds(bounds.pad(0.15), { paddingTopLeft: [40, 30], paddingBottomRight: [40, 120] });
-        map.on('click', () => {
+        map.on('click', (event) => {
+          if (event.originalEvent && event.originalEvent._stopped) return;
           if (!state.selectedId) return;
           state.selectedId = null;
           render();
